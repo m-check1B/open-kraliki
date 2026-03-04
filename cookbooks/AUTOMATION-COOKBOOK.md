@@ -43,10 +43,10 @@ Complete reference for all automated agents, their schedules, configs, and opera
 
 | # | Process | Schedule | Active Hours | Script |
 |---|---------|----------|--------------|--------|
-| 1 | **Telegram Relay** | Always-on (KeepAlive) | Configurable (default 8-23) | `automation/telegram-relay.py` |
+| 1 | **Telegram Relay** | Always-on (KeepAlive) | Configurable (default 24/7) | `automation/telegram-relay.py` |
 | 2 | **Fixer Orchestrator** | Every 15 min | Configurable (default 24/7) | `automation/fixer-orchestrator.sh` |
 | 3 | **Watchdog** | Every 60 min | 24/7 | `automation/watchdog.sh` |
-| 4 | **Heartbeat** | Every 30 min | Configurable (default 8-23) | `automation/heartbeat.sh` |
+| 4 | **Heartbeat** | Every 30 min | Configurable (default 24/7) | `automation/heartbeat.sh` |
 
 ---
 
@@ -191,7 +191,7 @@ tail -f ~/logs/watchdog/watchdog-*.log
 | Plist | `~/Library/LaunchAgents/com.automation.heartbeat.plist` |
 | Script | `automation/heartbeat.sh` |
 | Interval | 1800 seconds (30 min) |
-| Active hours | Configurable (default 8-23) |
+| Active hours | Configurable (default 24/7) |
 | Logs | `~/logs/heartbeat/heartbeat-*.log` |
 
 ### Flow
@@ -235,7 +235,7 @@ All configuration is via environment variables. See `env.example` for the full l
 | `ISSUE_PREFIX` | precheck, fixers | No (default: [AI-QA]) |
 | `COMMIT_PREFIX` | fixers | No (default: [AI-FIX]) |
 | `GROQ_API_KEY` | relay (voice) | No |
-| `ACTIVE_START` / `ACTIVE_END` | fixers, heartbeat | No (default: 0/24 or 8/23) |
+| `ACTIVE_START` / `ACTIVE_END` | fixers, heartbeat, relay | No (default: 0/24) |
 | `PRODUCTION_SERVER` | watchdog | No |
 
 ### Log Locations

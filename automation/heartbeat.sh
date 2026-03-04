@@ -60,8 +60,8 @@ trap 'rm -f "$LOCKFILE"' EXIT
 
 # ── Active hours gate ────────────────────────────────────────────
 HOUR=$(date +%H)
-ACTIVE_START="${HEARTBEAT_ACTIVE_START:-${ACTIVE_START:-8}}"
-ACTIVE_END="${HEARTBEAT_ACTIVE_END:-${ACTIVE_END:-23}}"
+ACTIVE_START="${HEARTBEAT_ACTIVE_START:-${ACTIVE_START:-0}}"
+ACTIVE_END="${HEARTBEAT_ACTIVE_END:-${ACTIVE_END:-24}}"
 
 if [ "$HOUR" -lt "$ACTIVE_START" ] || [ "$HOUR" -ge "$ACTIVE_END" ]; then
   echo "Outside active hours (${ACTIVE_START}-${ACTIVE_END}), skipping." | tee -a "$LOGFILE"

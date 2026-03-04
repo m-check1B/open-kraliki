@@ -15,8 +15,8 @@ Env vars:
   RELAY_TTS_VOICE     — macOS say voice for voice replies (default: "Ava (Premium)")
   RELAY_CLI_CMD       — CLI command to invoke, e.g. "claude --print" (default: "claude --print")
   RELAY_CLI_TIMEOUT   — Max seconds for CLI response (default: 120)
-  RELAY_ACTIVE_START  — Hour to start accepting messages (default: 8)
-  RELAY_ACTIVE_END    — Hour to stop accepting messages (default: 23)
+  RELAY_ACTIVE_START  — Hour to start accepting messages (default: 0)
+  RELAY_ACTIVE_END    — Hour to stop accepting messages (default: 24)
   RELAY_POLL_INTERVAL — Seconds between polls (default: 3)
   RELAY_LOG_DIR       — Directory for conversation logs (default: ~/logs/relay/conversations)
 """
@@ -74,8 +74,8 @@ TTS_VOICE = os.environ.get("RELAY_TTS_VOICE", "Ava (Premium)")  # macOS say voic
 
 CLI_CMD = os.environ.get("RELAY_CLI_CMD", "claude --print")
 CLI_TIMEOUT = int(os.environ.get("RELAY_CLI_TIMEOUT", os.environ.get("FIX_TIMEOUT", "120")))
-ACTIVE_START = int(os.environ.get("RELAY_ACTIVE_START", "8"))
-ACTIVE_END = int(os.environ.get("RELAY_ACTIVE_END", "23"))
+ACTIVE_START = int(os.environ.get("RELAY_ACTIVE_START", "0"))
+ACTIVE_END = int(os.environ.get("RELAY_ACTIVE_END", "24"))
 POLL_INTERVAL = int(os.environ.get("RELAY_POLL_INTERVAL", "3"))
 LOG_DIR = os.environ.get("RELAY_LOG_DIR", os.path.expanduser("~/logs/relay/conversations"))
 
