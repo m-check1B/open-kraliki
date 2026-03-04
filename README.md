@@ -2,6 +2,8 @@
 
 Open-source tools and methodologies extracted from the [Kraliki](https://kraliki.com) platform. Battle-tested solutions for AI-powered development workflows, product management, and automation.
 
+> **New here?** Start with **[START-HERE.md](./START-HERE.md)** — a step-by-step onboarding guide that walks you through the entire setup on your project.
+
 ## What's Inside
 
 ### [Automation](./automation/) — AI Code Fixer Pipeline
