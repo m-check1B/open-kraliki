@@ -1,25 +1,68 @@
 # Welcome to Kraliki OS
 
-Hey! I'm Claude Code — your AI coding assistant. I'll walk you through setting up this automation stack on **your** project. By the end, you'll have 4 AI agents fixing bugs from your Linear backlog every 15 minutes, automatically.
+## What is this?
+
+You have a coding project. You have bugs. This tool **automatically fixes them for you**.
+
+Here's what happens after setup:
+1. You write a bug report in Linear (a free project tracker)
+2. Every 15 minutes, an AI reads your bug reports
+3. The AI opens your code, figures out the fix, and applies it
+4. It pushes the fix to your repo and tells you on Telegram
+
+You also get a **Telegram chatbot** — message it from your phone to ask questions about your code, check on issues, or get status updates. It can even understand voice messages.
+
+**Time to set up: about 30 minutes.** No coding required — just copy-paste commands.
 
 Let's do this step by step. Check off each box as you go.
 
 ---
 
-## Phase 1: Prerequisites (5 min)
+## Phase 1: Install the Basics (10 min)
 
-Before we start, make sure you have these on your Mac:
+You need a Mac for this. (Linux users: you'll need to adapt the scheduling — see the cookbooks.)
 
-- [ ] **macOS** (this uses launchd — Linux users: adapt the `launchd/` plists to cron/systemd)
-- [ ] **Python 3.10+** → check: `python3 --version`
-- [ ] **Git** with SSH access to your project repo → check: `git fetch` works in your repo
-- [ ] **At least one AI coding CLI installed:**
-  - [ ] `claude` → [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (`npm install -g @anthropic-ai/claude-code`)
-  - [ ] `codex` → [Codex CLI](https://github.com/openai/codex) (optional, slot 1)
-  - [ ] `opencode` → [Opencode CLI](https://github.com/opencode-ai/opencode) (optional, slot 2)
-  - [ ] `kimi` → [Kimi Code CLI](https://github.com/MoonshotAI/kimi-cli) (optional, slot 3)
+### 1.1 Open Terminal
 
-> **Don't have all 4?** That's fine. You can run with just 1 CLI. We'll disable the others.
+Press `Cmd + Space`, type `Terminal`, press Enter. This is where you'll paste all the commands below.
+
+### 1.2 Install Homebrew (the Mac package manager)
+
+If you've never installed anything from the command line before, you need Homebrew first. Paste this into Terminal:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+It may ask for your Mac password (the one you use to log in). Type it and press Enter — you won't see the characters as you type, that's normal.
+
+> **Already have Homebrew?** Type `brew --version` — if it shows a version number, skip this step.
+
+### 1.3 Install Python, Node.js, and Git
+
+```bash
+brew install python3 node git
+```
+
+Verify they installed:
+```bash
+python3 --version   # Should show 3.10 or higher
+node --version      # Should show 18 or higher
+git --version       # Should show any version
+```
+
+### 1.4 Install Claude Code (the AI that fixes your bugs)
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+Then check it works:
+```bash
+claude --version
+```
+
+> **Want more AI fixers?** You can add up to 3 more later. For now, Claude is enough to get started. See the [Tools Reference](#tools--services-reference) at the bottom for the full list.
 
 ---
 
@@ -56,12 +99,24 @@ You need 2 external services: Linear (issue tracker) and Telegram (notifications
 
 Now let's wire everything together.
 
+### 3.1 Create a dedicated copy of your project
+
+The automation needs its own copy of your code. **Do not** point it at the folder where you do your daily work — the AI resets the code to the latest version before each fix, which would erase any unsaved work.
+
+```bash
+# Create a separate copy for the automation (replace the URL with YOUR repo)
+git clone git@github.com:you/your-project.git ~/github/my-project-automation
+```
+
+### 3.2 Set up your configuration file
+
 ```bash
 cd ~/github/open-kraliki
 cp env.example .env
 ```
 
-- [ ] Open `.env` in your editor and fill in every value:
+- [ ] Open `.env` in a text editor (you can use `open -e .env` to open it in TextEdit)
+- [ ] Fill in the values you collected in Phase 2:
 
 ```bash
 # Paste your values here:
@@ -70,18 +125,19 @@ export LINEAR_TEAM_ID="uuid-here"          # From step 2.1
 export LINEAR_TEAM_KEY="PROJ"              # Your team prefix
 export TELEGRAM_BOT_TOKEN="123456:ABC..."  # From step 2.2
 export PA_OWNER_CHAT_ID="123456789"        # From step 2.2
-export PROJECT_DIR="$HOME/github/your-project"  # ← YOUR repo path
+export PROJECT_DIR="$HOME/github/my-project-automation"  # The clone from 3.1
 ```
 
-- [ ] Point `PROJECT_DIR` to your actual project repo (absolute path)
-- [ ] Source it in your shell:
+### 3.3 Make the settings load automatically
+
+- [ ] Run this so your settings load every time you open Terminal:
 
 ```bash
 echo 'source ~/github/open-kraliki/.env' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-- [ ] Verify the vars are set:
+### 3.4 Verify it worked
 
 ```bash
 echo "Linear: ${LINEAR_API_KEY:0:15}..."
@@ -89,7 +145,7 @@ echo "Telegram: ${TELEGRAM_BOT_TOKEN:0:10}..."
 echo "Project: $PROJECT_DIR"
 ```
 
-All three should print something. If any is blank, check your `.env` file.
+All three lines should print something that's not blank. If any is empty, open `.env` again and double-check your values.
 
 ---
 
@@ -357,7 +413,7 @@ Separately from the relay, the **heartbeat** sends you periodic briefings (every
 
 - **Linear**: open issues assigned to you + unassigned urgent issues
 - **Calendar**: upcoming events today (requires `icalBuddy`: `brew install ical-buddy`)
-- **Telegram**: unread messages from you that the relay might have missed
+- **Relay status**: whether the Telegram relay process is running
 
 If nothing noteworthy is found, it stays silent (costs $0). Only messages you when there's something worth knowing.
 
@@ -371,28 +427,35 @@ tail -20 ~/logs/heartbeat/heartbeat-*.log
 
 ---
 
-## Phase 8: Ongoing Operations
+## Phase 8: You're Done! Here's Your Daily Workflow
 
-### Daily
+The automation runs by itself. Here's what your day looks like now:
 
-The automation runs itself. You just need to:
-- Create `[AI-QA]` issues in Linear when you find bugs
+### When you find a bug
+
+1. Go to Linear
+2. Create an issue with the title starting with `[AI-QA]` (e.g., `[AI-QA] Fix: Button not working on mobile`)
+3. That's it! The AI picks it up within 15 minutes
+
+### What to keep an eye on
+
 - Check Telegram for fix notifications
-- Review auto-fix commits (they push directly to main)
+- Review the auto-fix commits in your repo (they push directly to your branch)
+- If the AI can't fix something after 3 attempts, it stops trying — you may need to fix it yourself or rewrite the bug report with more detail
 
-### When things break
+### If something stops working
 
 ```bash
-# Quick health check
+# Run the health checker
 bash automation/watchdog.sh
 
-# Check fixer logs
+# Check what the fixer was doing
 ls -lt ~/logs/claude-fixer/fixer-*.log | head -3
 
-# Clear a stuck lock
+# Clear a stuck process
 rm ~/logs/fixer-orchestrator/orchestrator.lock
 
-# Full troubleshooting guide:
+# For more help, see:
 # → cookbooks/DOCTOR-COOKBOOK.md
 ```
 
@@ -414,10 +477,10 @@ launchctl load ~/Library/LaunchAgents/com.automation.*.plist
 
 ```
 Every 15 min:
-  Linear issues → 4 AI fixers (parallel) → commits → push → Telegram
+  Linear issues → 4 AI fixers (sequential) → commits → push → Telegram
 
 Every 30 min:
-  Linear + Calendar + Telegram → heartbeat briefing → Telegram
+  Linear + Calendar + relay status → heartbeat briefing → Telegram
 
 Every 60 min:
   Watchdog checks health → kills stuck processes → resets state
@@ -441,7 +504,7 @@ Everything this system uses, with install links.
 | 2 | **Opencode CLI** | `curl -fsSL https://opencode.ai/install | bash` ([repo](https://github.com/opencode-ai/opencode)) | Depends on configured provider |
 | 3 | **Kimi Code CLI** | `pip install kimi-cli` ([repo](https://github.com/MoonshotAI/kimi-cli)) | Moonshot API key ([get key](https://platform.moonshot.ai/)) |
 
-> **You only need 1 CLI** to get started. Claude Code (slot 0) is recommended as the primary fixer. Add others to run more fixers in parallel.
+> **You only need 1 CLI** to get started. Claude Code (slot 0) is recommended as the primary fixer. Add others for more coverage.
 
 ### External Services
 
@@ -473,7 +536,7 @@ brew install python3 node git
 # Install Claude Code (primary fixer)
 npm install -g @anthropic-ai/claude-code
 
-# Optional: Install additional CLIs for parallel fixing
+# Optional: Install additional CLIs for more fixing coverage
 npm install -g @openai/codex                    # Codex (slot 1)
 curl -fsSL https://opencode.ai/install | bash   # Opencode (slot 2)
 pip install kimi-cli                            # Kimi Code (slot 3)
@@ -490,5 +553,27 @@ brew install ical-buddy
 - **Troubleshooting**: [cookbooks/DOCTOR-COOKBOOK.md](./cookbooks/DOCTOR-COOKBOOK.md)
 - **Product roadmap methodology**: [product-roadmap/METHODOLOGY.md](./product-roadmap/METHODOLOGY.md)
 - **Issues**: Open an issue on this repo
+
+---
+
+## Glossary (What Do These Words Mean?)
+
+| Term | Plain English |
+|------|-------------|
+| **CLI** | Command Line Interface — a program you run by typing commands in Terminal |
+| **Git** | A tool that tracks every change to your code, like "Track Changes" in Word |
+| **Repo** (repository) | Your project folder that Git is tracking |
+| **Commit** | A saved snapshot of your code changes (like saving a document) |
+| **Push** | Uploading your commits to the cloud (GitHub, etc.) |
+| **Branch** | A separate copy of your code for trying things without breaking the original |
+| **API key** | A password that lets a program talk to a service (like Linear or Telegram) |
+| **launchd** | macOS's built-in scheduler — it runs your automation on a timer |
+| **plist** | A settings file that tells launchd what to run and when |
+| **Linear** | A project tracker where you write bug reports and feature requests |
+| **Telegram** | A messaging app — your bot lives here |
+| **ENV file (.env)** | A file with all your passwords and settings (never share this!) |
+| **Precheck** | A quick check that costs nothing — it looks at Linear before calling the AI |
+| **Watchdog** | A safety program that checks if everything is healthy every hour |
+| **Heartbeat** | A periodic summary sent to your Telegram (like a status report) |
 
 Welcome aboard. Let the machines do the boring work.

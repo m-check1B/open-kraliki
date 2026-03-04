@@ -1,17 +1,19 @@
 # Kraliki OS
 
-Open-source tools and methodologies extracted from the [Kraliki](https://kraliki.com) platform. Battle-tested solutions for AI-powered development workflows, product management, and automation.
+**AI agents that fix your bugs while you sleep.**
 
-> **New here?** Start with **[START-HERE.md](./START-HERE.md)** — a step-by-step onboarding guide that walks you through the entire setup on your project.
+Open-source automation that reads your bug reports, fixes the code, and pushes the fix — every 15 minutes. Extracted from the [Kraliki](https://kraliki.com) platform.
+
+> **New here?** Start with **[START-HERE.md](./START-HERE.md)** — a step-by-step guide that walks you through setup in 30 minutes. No coding experience needed.
 
 ## What's Inside
 
 ### [Automation](./automation/) — AI Code Fixer Pipeline
 
-Run **4 parallel AI coding agents** that automatically pick up Linear issues, fix code, push commits, and report via Telegram. Every 15 minutes.
+Run **up to 4 AI coding agents** that automatically pick up Linear issues, fix code, push commits, and report via Telegram. Every 15 minutes.
 
 ```
-Linear Backlog ──► 4 AI Fixers (parallel) ──► Auto-commits ──► Telegram
+Linear Backlog ──► 4 AI Fixers (sequential) ──► Auto-commits ──► Telegram
 ```
 
 Includes: orchestrator, watchdog, heartbeat, Telegram relay with voice, Linear CLI tool.
@@ -65,6 +67,8 @@ See [SETUP.md](./SETUP.md) for the full installation guide.
 - **Linear** account with API key
 - **Telegram** bot (via @BotFather)
 
+> **Safety note:** Point `PROJECT_DIR` at a **dedicated clone** of your repo, not your working copy. Fixers run `git reset --hard` which destroys uncommitted changes. The AI CLIs run with auto-approve permissions to enable unattended fixing — review commits before merging to production.
+
 ## Architecture
 
 ```
@@ -77,11 +81,9 @@ See [SETUP.md](./SETUP.md) for the full installation guide.
 │  └───────┬─────────┘  └──────────┘  └───────────────┘  │
 │          │                                              │
 │  ┌───────┴───────────────────────────┐                  │
-│  │        4 Parallel Fixers          │                  │
-│  │  ┌──────┐ ┌─────┐ ┌──────┐ ┌────┐ │                  │
-│  │  │claude│ │codex│ │openc.│ │kimi│ │                  │
-│  │  │ sl.0 │ │sl.1 │ │ sl.2 │ │sl.3│ │                  │
-│  │  └──────┘ └─────┘ └──────┘ └────┘ │                  │
+│  │   4 Fixers (run sequentially)    │                  │
+│  │  claude → codex → opencode → kimi │                  │
+│  │  (slot 0) (sl.1)  (sl.2)  (sl.3) │                  │
 │  └───────────────────────────────────┘                  │
 │                                                         │
 │  ┌─────────────────────────────────────┐                │
@@ -96,7 +98,7 @@ Kraliki is an AI-powered platform for education, communication, and workflow aut
 
 We're sharing them because:
 - Good automation shouldn't be reinvented by every team
-- The 4-fixer parallel pattern is genuinely useful and non-obvious
+- The multi-fixer automation pattern is genuinely useful and non-obvious
 - Product audit methodology helps any team ship better software
 
 The Kraliki platform itself remains closed-source.

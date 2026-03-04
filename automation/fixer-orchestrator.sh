@@ -1,14 +1,14 @@
 #!/bin/bash
-# fixer-orchestrator.sh — Runs all 4 coding fixers IN PARALLEL
-# Each fixer works on non-overlapping issues (slot modulo 4).
-# Git push conflicts are handled by retry logic inside each fixer.
+# fixer-orchestrator.sh — Runs all configured coding fixers SEQUENTIALLY
+# Each fixer works on non-overlapping issues (slot modulo FIXER_COUNT).
+# Sequential execution prevents git race conditions (all fixers share one worktree).
 #
 # NOTE: NEVER hardcode model names (e.g. "Opus", "Sonnet", "o4-mini", "GLM-4.7").
 #       CLIs manage their own models internally. Reference CLIs only by name.
 #
 # LaunchAgent: com.automation.fixer-orchestrator
 # Schedule: Every 15 minutes
-# Parallel: Claude Fixer (slot 0) | Codex Fixer (slot 1) | Opencode Fixer (slot 2) | Kimi Fixer (slot 3)
+# Slots: Claude (0), Codex (1), Opencode (2), Kimi (3)
 
 set -euo pipefail
 
@@ -53,70 +53,35 @@ trap 'rm -f "$LOCKFILE"' EXIT
 
 # ── Fixer definitions ───────────────────────────────────────────
 FIXERS=("claude" "codex" "opencode" "kimi")
-FIXER_PIDS=()
-FIXER_LOGS=()
 FIXER_EXITS=()
 
-# ── Per-fixer log files ─────────────────────────────────────────
-for fixer in "${FIXERS[@]}"; do
-  FIXER_LOGS+=("${LOGDIR}/${fixer}-$(date +%Y%m%d-%H%M).log")
-done
+# Export fixer count so precheck.py can use dynamic modulo
+export FIXER_COUNT="${#FIXERS[@]}"
 
-# ── Run all fixers in parallel ──────────────────────────────────
-echo "Starting all ${#FIXERS[@]} fixers in parallel..." | tee -a "$LOGFILE"
+# ── Run fixers sequentially (safe: all share one git worktree) ──
+echo "Running ${#FIXERS[@]} fixers sequentially..." | tee -a "$LOGFILE"
 
 for i in "${!FIXERS[@]}"; do
   fixer="${FIXERS[$i]}"
-  fixer_log="${FIXER_LOGS[$i]}"
   fixer_script="${AUTOMATION_DIR}/fixers/${fixer}-fixer.sh"
-  slot=$i
+  fixer_log="${LOGDIR}/${fixer}-$(date +%Y%m%d-%H%M).log"
 
-  echo ">>> [$((i+1))/${#FIXERS[@]}] ${fixer^} Fixer (slot ${slot}) <<<" | tee -a "$LOGFILE"
+  echo ">>> [$((i+1))/${#FIXERS[@]}] ${fixer^} Fixer (slot ${i}) <<<" | tee -a "$LOGFILE"
 
+  exit_code=0
   if [ -f "$fixer_script" ]; then
-    bash "$fixer_script" > "$fixer_log" 2>&1 &
-    FIXER_PIDS+=($!)
+    bash "$fixer_script" > "$fixer_log" 2>&1 || exit_code=$?
   else
     echo "  WARNING: ${fixer_script} not found, skipping." | tee -a "$LOGFILE"
-    FIXER_PIDS+=(0)
-  fi
-done
-
-# Log all PIDs
-PID_LINE="PIDs:"
-for i in "${!FIXERS[@]}"; do
-  PID_LINE="${PID_LINE} ${FIXERS[$i]}=${FIXER_PIDS[$i]}"
-done
-echo "$PID_LINE" | tee -a "$LOGFILE"
-
-# ── Wait for all fixers to complete ─────────────────────────────
-for i in "${!FIXERS[@]}"; do
-  fixer="${FIXERS[$i]}"
-  pid="${FIXER_PIDS[$i]}"
-  exit_code=0
-
-  if [ "$pid" -ne 0 ]; then
-    wait "$pid" 2>/dev/null || exit_code=$?
   fi
 
   FIXER_EXITS+=("$exit_code")
   echo "${fixer^} Fixer finished (exit ${exit_code})" | tee -a "$LOGFILE"
-done
 
-# ── Merge per-fixer logs into orchestrator log ──────────────────
-echo "" | tee -a "$LOGFILE"
-
-for i in "${!FIXERS[@]}"; do
-  fixer="${FIXERS[$i]}"
-  fixer_log="${FIXER_LOGS[$i]}"
-
+  # Merge fixer log into orchestrator log
   echo "--- ${fixer^} Fixer output ---" >> "$LOGFILE"
   cat "$fixer_log" >> "$LOGFILE" 2>/dev/null || true
   echo "" >> "$LOGFILE"
-done
-
-# Clean up per-fixer logs (already merged)
-for fixer_log in "${FIXER_LOGS[@]}"; do
   rm -f "$fixer_log"
 done
 

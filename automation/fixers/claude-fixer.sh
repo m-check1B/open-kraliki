@@ -115,9 +115,12 @@ fi
 
 # ── Prepare prompt template ──────────────────────────────────────
 PROMPT_TEMPLATE=$(cat "${AUTOMATION_DIR}/../prompts/fixer.md")
+
+# Claude-specific: load personality + project context via --append-system-prompt
+# Other CLIs (codex, opencode, kimi) don't support system prompt injection,
+# so this context is only available to the Claude fixer.
 SYSTEM_CONTEXT="$(cat "${AUTOMATION_DIR}/../personality/SOUL.md" 2>/dev/null || echo '')"
 
-# ── Load project CLAUDE.md for context ───────────────────────────
 PROJECT_CONTEXT=""
 if [ -f "${PROJECT_DIR}/CLAUDE.md" ]; then
   PROJECT_CONTEXT=$(cat "${PROJECT_DIR}/CLAUDE.md")

@@ -77,7 +77,14 @@ fi
 echo "Precheck result (exit ${PRECHECK_EXIT}):" | tee -a "$LOGFILE"
 echo "$FINDINGS_JSON" | tee -a "$LOGFILE"
 
-# Exit 1 from precheck = no findings, skip LLM
+# Exit 1 = no findings (skip LLM), Exit 2 = error (log warning but don't call LLM)
+if [ "$PRECHECK_EXIT" -eq 2 ]; then
+  echo "WARNING: Precheck encountered errors (API failure?). Check logs." | tee -a "$LOGFILE"
+  echo "$FINDINGS_JSON" | tee -a "$LOGFILE"
+  echo "=== Heartbeat complete (precheck error): $(date +%Y-%m-%dT%H:%M:%SZ) ===" | tee -a "$LOGFILE"
+  exit 0
+fi
+
 if [ "$PRECHECK_EXIT" -ne 0 ]; then
   echo "No findings, skipping LLM call." | tee -a "$LOGFILE"
   echo "=== Heartbeat complete (no findings): $(date +%Y-%m-%dT%H:%M:%SZ) ===" | tee -a "$LOGFILE"

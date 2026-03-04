@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 """heartbeat-precheck.py — Cheap pre-check for heartbeat automation (no LLM calls).
 
-Checks Linear issues, Calendar events, and Telegram unread messages.
-Outputs JSON to stdout. Exit 0 = findings exist, exit 1 = nothing found.
+Checks Linear issues, Calendar events, and Telegram relay status.
+Outputs JSON to stdout. Exit 0 = findings exist, exit 1 = nothing found, exit 2 = error.
 
 Env vars:
   LINEAR_API_KEY      — Linear API key (required for Linear check)
   LINEAR_TEAM_ID      — Team UUID to query (required for Linear check)
-  TELEGRAM_BOT_TOKEN  — Telegram bot token (required for Telegram check)
-  PA_OWNER_CHAT_ID    — Owner's Telegram chat ID (required for Telegram check)
 """
 
 import json
@@ -23,8 +21,6 @@ from urllib.request import Request, urlopen
 LINEAR_API_URL = "https://api.linear.app/graphql"
 LINEAR_API_KEY = os.environ.get("LINEAR_API_KEY", "")
 LINEAR_TEAM_ID = os.environ.get("LINEAR_TEAM_ID", "")
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-PA_OWNER_CHAT_ID = os.environ.get("PA_OWNER_CHAT_ID", "")
 
 
 def check_linear() -> list[dict]:
@@ -173,33 +169,30 @@ def check_calendar() -> list[dict]:
 
 
 def check_telegram() -> list[dict]:
-    """Check Telegram bot API for unread updates from the owner."""
-    if not TELEGRAM_BOT_TOKEN:
-        return [{"error": "TELEGRAM_BOT_TOKEN not set"}]
+    """Check if the Telegram relay process is running (without calling getUpdates).
 
+    NOTE: We intentionally do NOT call getUpdates here because the always-on
+    telegram-relay.py daemon uses long-polling on the same bot token. Calling
+    getUpdates from heartbeat would consume updates meant for the relay, causing
+    messages to be silently dropped.
+
+    Instead, we just check if the relay launchd agent has a running PID.
+    """
     try:
-        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates?limit=10&timeout=0"
-        req = Request(url)
-        with urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read())
-
-        updates = data.get("result", [])
-        if not updates:
-            return []
-
-        # Filter to owner's messages only
-        owner_msgs = []
-        for u in updates:
-            msg = u.get("message", {})
-            chat_id = str(msg.get("chat", {}).get("id", ""))
-            if chat_id == PA_OWNER_CHAT_ID and msg.get("text"):
-                owner_msgs.append({
-                    "text": msg["text"][:100],
-                    "date": msg.get("date", 0),
-                })
-        return owner_msgs
-    except (URLError, Exception) as e:
-        return [{"error": f"Telegram API failed: {e}"}]
+        result = subprocess.run(
+            ["launchctl", "list"],
+            capture_output=True, text=True, timeout=5,
+        )
+        for line in result.stdout.splitlines():
+            if "com.automation.telegram-relay" in line:
+                parts = line.split()
+                pid = parts[0] if parts else "-"
+                if pid != "-" and pid.isdigit():
+                    return []  # Relay is running, no findings needed
+                return [{"warning": "Telegram relay is not running (no PID)"}]
+        return [{"warning": "Telegram relay agent not found in launchctl"}]
+    except Exception as e:
+        return [{"error": f"Relay check failed: {e}"}]
 
 
 def main():
@@ -210,19 +203,27 @@ def main():
         "telegram": check_telegram(),
     }
 
-    # Determine if there is anything worth reporting
+    # Check for hard errors (API failures vs. just "nothing found")
+    has_error = False
     has_findings = False
     for key in ("linear", "calendar", "telegram"):
         items = findings[key]
-        real_items = [i for i in items if "error" not in i]
-        if real_items:
-            has_findings = True
-            break
+        for item in items:
+            if "error" in item:
+                has_error = True
+            elif "warning" not in item:
+                has_findings = True
 
     findings["has_findings"] = has_findings
+    findings["has_errors"] = has_error
     print(json.dumps(findings, indent=2, ensure_ascii=False))
 
-    sys.exit(0 if has_findings else 1)
+    if has_findings:
+        sys.exit(0)   # Findings exist → trigger LLM
+    elif has_error:
+        sys.exit(2)   # API/system error → heartbeat should log, not silently skip
+    else:
+        sys.exit(1)   # No findings, no errors → skip LLM (save cost)
 
 
 if __name__ == "__main__":

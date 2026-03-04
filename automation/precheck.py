@@ -148,10 +148,15 @@ def filter_issues(issues: list[dict], state: dict) -> list[dict]:
 
 
 def split_by_slot(issues: list[dict]) -> list[dict]:
-    """Split issues between fixers based on FIXER_SLOT."""
-    if FIXER_SLOT in ("0", "1", "2", "3"):
+    """Split issues between fixers based on FIXER_SLOT.
+
+    Uses FIXER_COUNT env var (set by orchestrator) for dynamic modulo.
+    If only 2 fixers run, issues split 2 ways instead of 4.
+    """
+    fixer_count = int(os.environ.get("FIXER_COUNT", "4"))
+    if FIXER_SLOT.isdigit():
         slot = int(FIXER_SLOT)
-        return [q for idx, q in enumerate(issues) if idx % 4 == slot]
+        return [q for idx, q in enumerate(issues) if idx % fixer_count == slot]
     elif FIXER_SLOT == "even":
         return [q for idx, q in enumerate(issues) if idx % 2 == 0]
     elif FIXER_SLOT == "odd":

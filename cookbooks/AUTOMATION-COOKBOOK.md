@@ -18,7 +18,7 @@ Complete reference for all automated agents, their schedules, configs, and opera
 │                                                         │
 │  ┌───────────────────────────────────────────────┐      │
 │  │ Fixer Orchestrator (every 15 min)              │      │
-│  │ Runs 4 fixers IN PARALLEL:                     │      │
+│  │ Runs 4 fixers SEQUENTIALLY:                    │      │
 │  │  ┌────────────┐ ┌────────────┐ ┌────────────┐ │      │
 │  │  │ Claude     │ │ Codex      │ │ Opencode   │ │      │
 │  │  │ Slot 0     │ │ Slot 1     │ │ Slot 2     │ │      │
@@ -87,7 +87,7 @@ When another bot instance polls the same bot token, Telegram returns 409. Fix: s
 
 ## 2. Fixer Orchestrator
 
-**Purpose:** Runs all 4 fixers in parallel every 15 minutes. Each fixer picks up Linear issues assigned to its slot.
+**Purpose:** Runs all 4 fixers sequentially every 15 minutes. Each fixer picks up Linear issues assigned to its slot. Sequential execution prevents git race conditions since all fixers share one worktree.
 
 | Field | Value |
 |-------|-------|
@@ -196,7 +196,7 @@ tail -f ~/logs/watchdog/watchdog-*.log
 
 ```
 1. Check active hours → skip if outside
-2. Run heartbeat-precheck.py (no LLM, checks Linear/Calendar/Telegram)
+2. Run heartbeat-precheck.py (no LLM, checks Linear/Calendar/Relay status)
 3. If no findings → exit (cost: $0)
 4. If findings → call AI CLI to compose message
 5. Send Telegram message (unless CLI says "SKIP")
@@ -225,8 +225,8 @@ All configuration is via environment variables. See `env.example` for the full l
 | `LINEAR_API_KEY` | precheck, linear-tool, heartbeat-precheck | Yes |
 | `LINEAR_TEAM_ID` | precheck, linear-tool, heartbeat-precheck | Yes |
 | `LINEAR_TEAM_KEY` | linear-tool | Yes |
-| `TELEGRAM_BOT_TOKEN` | relay, send-telegram, heartbeat-precheck | Yes |
-| `PA_OWNER_CHAT_ID` | relay, send-telegram, heartbeat-precheck | Yes |
+| `TELEGRAM_BOT_TOKEN` | relay, send-telegram | Yes |
+| `PA_OWNER_CHAT_ID` | relay, send-telegram | Yes |
 | `PROJECT_DIR` | all fixers | Yes |
 | `PROJECT_BRANCH` | all fixers | No (default: main) |
 | `ISSUE_PREFIX` | precheck, fixers | No (default: [AI-QA]) |

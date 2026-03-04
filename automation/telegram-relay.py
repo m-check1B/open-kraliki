@@ -54,7 +54,10 @@ _load_env()
 
 # ── Config ────────────────────────────────────────────────────────────
 AUTOMATION_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.environ.get("PROJECT_DIR", os.path.dirname(AUTOMATION_DIR))
+# TEMPLATE_ROOT = where this automation template lives (personality/, prompts/)
+# PROJECT_DIR = the user's project repo (where CLI runs, git operations happen)
+TEMPLATE_ROOT = os.path.dirname(AUTOMATION_DIR)
+PROJECT_ROOT = os.environ.get("PROJECT_DIR", TEMPLATE_ROOT)
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 CHAT_ID = os.environ.get("PA_OWNER_CHAT_ID", "")
@@ -68,8 +71,9 @@ ACTIVE_END = int(os.environ.get("RELAY_ACTIVE_END", "23"))
 POLL_INTERVAL = int(os.environ.get("RELAY_POLL_INTERVAL", "3"))
 LOG_DIR = os.environ.get("RELAY_LOG_DIR", os.path.expanduser("~/logs/relay/conversations"))
 
-PERSONALITY_DIR = os.path.join(PROJECT_ROOT, "personality")
-PROMPT_TEMPLATE = os.path.join(PROJECT_ROOT, "prompts", "relay.md")
+# Personality and prompts live in the template repo, not the user's project
+PERSONALITY_DIR = os.path.join(TEMPLATE_ROOT, "personality")
+PROMPT_TEMPLATE = os.path.join(TEMPLATE_ROOT, "prompts", "relay.md")
 
 # Track last processed update to avoid duplicates
 last_update_id = 0
