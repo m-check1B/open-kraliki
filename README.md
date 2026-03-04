@@ -101,7 +101,7 @@ chmod +x install.sh && ./install.sh
 launchctl list | grep com.automation
 ```
 
-**Prerequisites:** macOS, Python 3.10+, Node.js 18+, Git, at least one AI CLI ([Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Codex](https://github.com/openai/codex), [Opencode](https://github.com/opencode-ai/opencode), or [Kimi](https://github.com/MoonshotAI/kimi-cli)), a [Linear](https://linear.app) account, and a [Telegram](https://t.me/BotFather) bot.
+**Prerequisites:** macOS, Python 3.10+, Node.js 18+, Git, at least one AI coding CLI (see **[CLI-SETUP.md](./CLI-SETUP.md)** for install + auth), a [Linear](https://linear.app) account, and a [Telegram](https://t.me/BotFather) bot.
 
 > **Safety:** Point `PROJECT_DIR` at a **dedicated clone**, not your working copy. Fixers run `git reset --hard` before each fix. The AI CLIs run with auto-approve permissions — review commits before merging to production.
 
@@ -227,6 +227,7 @@ See [product-roadmap/METHODOLOGY.md](./product-roadmap/METHODOLOGY.md).
 | Doc | What It Covers |
 |-----|---------------|
 | **[START-HERE.md](./START-HERE.md)** | Beginner setup guide (30 min, no experience needed) |
+| **[CLI-SETUP.md](./CLI-SETUP.md)** | Install + authenticate each AI coding CLI |
 | **[SETUP.md](./SETUP.md)** | Technical installation reference |
 | **[AUTOMATION-COOKBOOK.md](./cookbooks/AUTOMATION-COOKBOOK.md)** | Architecture, schedules, configs, operations |
 | **[DOCTOR-COOKBOOK.md](./cookbooks/DOCTOR-COOKBOOK.md)** | Troubleshooting, recovery playbooks, diagnostics |

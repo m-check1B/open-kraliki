@@ -541,14 +541,14 @@ Everything this system uses, with install links.
 
 ### AI Coding CLIs
 
-| Slot | CLI | Install | API Key Required |
-|------|-----|---------|-----------------|
-| 0 | **Claude Code** | `npm install -g @anthropic-ai/claude-code` ([docs](https://docs.anthropic.com/en/docs/claude-code)) | `ANTHROPIC_API_KEY` ([get key](https://console.anthropic.com/)) |
-| 1 | **Codex CLI** | `npm install -g @openai/codex` ([repo](https://github.com/openai/codex)) | `OPENAI_API_KEY` ([get key](https://platform.openai.com/api-keys)) |
-| 2 | **Opencode CLI** | `curl -fsSL https://opencode.ai/install | bash` ([repo](https://github.com/opencode-ai/opencode)) | Depends on configured provider |
-| 3 | **Kimi Code CLI** | `pip install kimi-cli` ([repo](https://github.com/MoonshotAI/kimi-cli)) | Moonshot API key ([get key](https://platform.moonshot.ai/)) |
+| Slot | CLI | Install | Auth |
+|------|-----|---------|------|
+| 0 | **Claude Code** | `npm install -g @anthropic-ai/claude-code` | [Claude Pro/Max](https://claude.ai/upgrade) plan → `claude` (browser login) |
+| 1 | **Codex CLI** | `npm install -g @openai/codex` | [OpenAI](https://platform.openai.com/) plan → `codex auth login` (browser login) |
+| 2 | **Opencode CLI** | `curl -fsSL https://opencode.ai/install \| bash` | [Z.AI Coding Plan](https://z.ai/subscribe) subscription → API key → `opencode auth login` |
+| 3 | **Kimi Code CLI** | `pip install kimi-cli` | [Kimi Membership](https://www.kimi.com/code/en) subscription → API key → `kimi auth login` |
 
-> **You only need 1 CLI** to get started. Claude Code (slot 0) is recommended as the primary fixer. Add others for more coverage.
+> **You only need 1 CLI** to get started. Claude Code (slot 0) is recommended as the primary fixer. Add others for more coverage. See **[CLI-SETUP.md](./CLI-SETUP.md)** for detailed setup instructions for each CLI.
 
 ### External Services
 
