@@ -1,6 +1,6 @@
 # Setup Guide
 
-Step-by-step installation checklist for the Code Automation Template.
+Step-by-step installation checklist for Kraliki OS automation.
 
 ## Prerequisites Checklist
 
@@ -14,8 +14,8 @@ Step-by-step installation checklist for the Code Automation Template.
 ### 1. Clone This Repository
 
 ```bash
-git clone <repo-url> ~/github/code-automation-template
-cd ~/github/code-automation-template
+git clone https://github.com/user/open-kraliki.git ~/github/open-kraliki
+cd ~/github/open-kraliki
 ```
 
 ### 2. Configure Environment Variables
@@ -38,7 +38,7 @@ Edit `.env` and fill in:
 
 Then source it in your shell:
 ```bash
-echo 'source ~/github/code-automation-template/.env' >> ~/.zshrc
+echo 'source ~/github/open-kraliki/.env' >> ~/.zshrc
 source ~/.zshrc
 ```
 
@@ -160,7 +160,7 @@ launchctl unload ~/Library/LaunchAgents/com.automation.fixer-orchestrator.plist
 
 Pull the latest template and re-run the installer:
 ```bash
-cd ~/github/code-automation-template
+cd ~/github/open-kraliki
 git pull
 ./install.sh
 ```
