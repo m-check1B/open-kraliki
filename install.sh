@@ -101,9 +101,14 @@ install_plist() {
     generate_plist "$label" "$dest"
   fi
 
+  # Detect python3 path (works on both Apple Silicon and Intel Macs)
+  local PYTHON3_PATH
+  PYTHON3_PATH="$(command -v python3 2>/dev/null || echo "/usr/bin/python3")"
+
   # Substitute placeholders that templates may contain
   perl -i -pe "s|__AUTOMATION_DIR__|${AUTOMATION_DIR}|g" "$dest"
   perl -i -pe "s|__HOME__|${HOME}|g" "$dest"
+  perl -i -pe "s|__PYTHON3__|${PYTHON3_PATH}|g" "$dest"
 }
 
 generate_plist() {
@@ -154,7 +159,7 @@ PLIST
   <string>${label}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/opt/homebrew/bin/python3</string>
+    <string>__PYTHON3__</string>
     <string>${AUTOMATION_DIR}/telegram-relay.py</string>
   </array>
   <key>KeepAlive</key>

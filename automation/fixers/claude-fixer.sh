@@ -41,8 +41,9 @@ LOGFILE="${LOGDIR}/fixer-$(date +%Y%m%d-%H%M).log"
 # Ensure log dir exists
 mkdir -p "$LOGDIR"
 
-# Rotate logs older than 7 days
-find "$LOGDIR" -name 'fixer-*.log' -mtime +7 -delete 2>/dev/null || true
+# Rotate logs older than retention period
+LOG_RETENTION_DAYS="${LOG_RETENTION_DAYS:-7}"
+find "$LOGDIR" -name 'fixer-*.log' -mtime +${LOG_RETENTION_DAYS} -delete 2>/dev/null || true
 
 echo "=== ${FIXER_NAME}: ${TIMESTAMP} ===" | tee "$LOGFILE"
 
@@ -99,7 +100,6 @@ fi
 
 if [ "$PRECHECK_EXIT" -ne 0 ]; then
   echo "No ${ISSUE_PREFIX} issues found, nothing to fix." | tee -a "$LOGFILE"
-  echo "AI Fixer: all clear, no open issues" | python3 "${AUTOMATION_DIR}/send-telegram.py" 2>&1 | tee -a "$LOGFILE"
   echo "=== ${FIXER_NAME} complete (no issues): $(date +%Y-%m-%dT%H:%M:%SZ) ===" | tee -a "$LOGFILE"
   exit 0
 fi
@@ -192,8 +192,11 @@ ${PROJECT_CONTEXT}" \
   WD_PID=$!
 
   # Wait for CLI to finish (or be killed)
+  # Note: disable errexit around wait — non-zero CLI exit is handled below
+  set +e
   wait $CLI_PID 2>/dev/null
   CLI_EXIT=$?
+  set -e
 
   # Cancel watchdog
   kill $WD_PID 2>/dev/null; wait $WD_PID 2>/dev/null || true

@@ -54,7 +54,7 @@ _load_env()
 
 # ── Config ────────────────────────────────────────────────────────────
 AUTOMATION_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(AUTOMATION_DIR)
+PROJECT_ROOT = os.environ.get("PROJECT_DIR", os.path.dirname(AUTOMATION_DIR))
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 CHAT_ID = os.environ.get("PA_OWNER_CHAT_ID", "")

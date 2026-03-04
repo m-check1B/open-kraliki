@@ -68,7 +68,8 @@ echo "--- Check 1: Commit freshness ---" | tee -a "$LOGFILE"
 PROGRESS_OK=true
 if [ -d "${PROJECT_DIR}/.git" ]; then
   cd "$PROJECT_DIR"
-  git fetch origin main --quiet 2>/dev/null || true
+  PROJECT_BRANCH="${PROJECT_BRANCH:-main}"
+  git fetch origin "$PROJECT_BRANCH" --quiet 2>/dev/null || true
 
   COMMITS_LAST_HOUR=$(git log --since="1 hour ago" --oneline 2>/dev/null | wc -l | tr -d ' ')
   COMMITS_LAST_WINDOW=$(git log --since="${COMMIT_FRESHNESS_HOURS} hours ago" --oneline 2>/dev/null | wc -l | tr -d ' ')
@@ -133,7 +134,7 @@ echo "--- Check 3: CLI auth ---" | tee -a "$LOGFILE"
 
 AUTH_OK=true
 TODAY=$(date +%Y%m%d)
-RECENT_AUTH_ERR=$(grep -rl "Not logged in" "${HOME}/logs/fixer-orchestrator/orchestrator-${TODAY}"*.log "${HOME}/logs/"*-fixer/fixer-"${TODAY}"*.log 2>/dev/null | wc -l | tr -d ' ')
+RECENT_AUTH_ERR=$(grep -rl "Not logged in" "${HOME}/logs/fixer-orchestrator/orchestrator-${TODAY}"*.log "${HOME}/logs/"*-fixer/fixer-"${TODAY}"*.log 2>/dev/null | wc -l | tr -d ' ' || echo "0")
 
 if [ "$RECENT_AUTH_ERR" -gt 0 ]; then
   echo "CLI: AUTH ERROR detected in recent logs" | tee -a "$LOGFILE"
@@ -163,7 +164,7 @@ else
   # Check for recent 409s in relay logs
   RELAY_LOG_DIR="${HOME}/logs/relay"
   if [ -d "$RELAY_LOG_DIR" ]; then
-    RECENT_409=$(grep "409 Conflict" "${RELAY_LOG_DIR}/"*.log 2>/dev/null | tail -1 | awk '{print $1}' | tr -d '[]')
+    RECENT_409=$(grep "409 Conflict" "${RELAY_LOG_DIR}/"*.log 2>/dev/null | tail -1 | awk '{print $1}' | tr -d '[]' || echo "")
     if [ -n "$RECENT_409" ]; then
       LAST_409_TS=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$RECENT_409" "+%s" 2>/dev/null || echo "0")
       NOW_TS=$(date "+%s")
@@ -297,11 +298,6 @@ if [ "$ALL_OK" = "true" ]; then
   echo "All checks passed. No intervention needed." | tee -a "$LOGFILE"
   echo "=== Watchdog complete (all clear): $(date +%Y-%m-%dT%H:%M:%SZ) ===" | tee -a "$LOGFILE"
 
-  # Run optional post-check report script
-  if [ -f "${AUTOMATION_DIR}/watchdog-report.sh" ]; then
-    source "${AUTOMATION_DIR}/watchdog-report.sh" 2>/dev/null || true
-  fi
-
   exit 0
 fi
 
@@ -313,15 +309,14 @@ echo "Calling ${RECOVERY_CLI} for diagnosis and repair..." | tee -a "$LOGFILE"
 RECOVERY_STEPS=""
 if echo "$PROBLEMS" | grep -q "no-commits\|fixer-stuck"; then
   RECOVERY_STEPS="${RECOVERY_STEPS}
-- Kill stuck fixer processes: pkill -f 'claude.*--print' ; pkill -f 'codex.*exec'
+- Kill stuck fixer processes: pkill -f 'claude.*--print' ; pkill -f 'codex.*exec' ; pkill -f 'opencode.*run' ; pkill -f 'kimi.*--yes'
 - Clear locks: rm -f ${HOME}/logs/fixer-orchestrator/orchestrator.lock ${HOME}/logs/*-fixer/*-fixer.lock
 - Check recent logs: tail -20 \$(ls -t ${HOME}/logs/fixer-orchestrator/orchestrator-*.log 2>/dev/null | head -1)
 - Reset maxed state if needed"
 fi
 if echo "$PROBLEMS" | grep -q "auth-broken"; then
   RECOVERY_STEPS="${RECOVERY_STEPS}
-- Auth is broken. Check: claude auth status
-- If not logged in, this requires interactive login (cannot auto-fix)
+- Auth is broken. Check CLI auth status (may require interactive login)
 - Send Telegram alert about auth failure"
 fi
 if echo "$PROBLEMS" | grep -q "relay-409"; then
@@ -350,7 +345,27 @@ Execute the recovery steps above. Verify each fix worked. Do NOT create new file
 cd "${PROJECT_DIR}"
 WATCHDOG_TIMEOUT="${WATCHDOG_RECOVERY_TIMEOUT:-300}"
 # macOS-safe timeout using perl alarm (no GNU coreutils needed)
-RECOVERY_OUTPUT=$(echo "$RECOVERY_PROMPT" | perl -e "alarm $WATCHDOG_TIMEOUT; exec @ARGV" "$RECOVERY_CLI" run 2>&1) || true
+# Build CLI-agnostic recovery command
+RECOVERY_CMD=()
+case "$RECOVERY_CLI" in
+  *claude*)
+    RECOVERY_CMD=("$RECOVERY_CLI" --print --dangerously-skip-permissions --no-session-persistence)
+    ;;
+  *codex*)
+    RECOVERY_CMD=("$RECOVERY_CLI" exec --dangerously-bypass-approvals-and-sandbox --ephemeral)
+    ;;
+  *opencode*)
+    RECOVERY_CMD=("$RECOVERY_CLI" run --agent build)
+    ;;
+  *kimi*)
+    RECOVERY_CMD=("$RECOVERY_CLI" --yes)
+    ;;
+  *)
+    RECOVERY_CMD=("$RECOVERY_CLI")
+    ;;
+esac
+
+RECOVERY_OUTPUT=$(echo "$RECOVERY_PROMPT" | perl -e "alarm $WATCHDOG_TIMEOUT; exec @ARGV" "${RECOVERY_CMD[@]}" 2>&1) || true
 echo "$RECOVERY_OUTPUT" | tail -50 | tee -a "$LOGFILE"
 
 # ── Send Telegram alert ──────────────────────────────────────────
@@ -365,10 +380,5 @@ fi
 
 echo "" | tee -a "$LOGFILE"
 echo "=== Watchdog complete (intervention): $(date +%Y-%m-%dT%H:%M:%SZ) ===" | tee -a "$LOGFILE"
-
-# Run optional post-check report script
-if [ -f "${AUTOMATION_DIR}/watchdog-report.sh" ]; then
-  source "${AUTOMATION_DIR}/watchdog-report.sh" 2>/dev/null || true
-fi
 
 exit 0

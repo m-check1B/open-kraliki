@@ -153,7 +153,7 @@ find ~/logs -name '*.log' -mtime +7 -delete
 
 ```bash
 # 1. Source env
-source ~/.env  # or wherever your env file is
+source ~/github/open-kraliki/.env  # adjust path to your repo
 
 # 2. Check env vars are set
 echo "LINEAR_API_KEY: ${LINEAR_API_KEY:0:10}..."

@@ -121,7 +121,7 @@ case "$HEARTBEAT_CLI" in
     CLI_ARGS+=(--allowedTools "Read,Grep,Glob")
     ;;
   *codex*)
-    CLI_ARGS+=(--quiet)
+    CLI_ARGS+=(exec --quiet)
     ;;
   *opencode*)
     CLI_ARGS+=(run --agent build)
