@@ -421,6 +421,62 @@ Always-on:
 
 ---
 
+## Tools & Services Reference
+
+Everything this system uses, with install links.
+
+### AI Coding CLIs
+
+| Slot | CLI | Install | API Key Required |
+|------|-----|---------|-----------------|
+| 0 | **Claude Code** | `npm install -g @anthropic-ai/claude-code` ([docs](https://docs.anthropic.com/en/docs/claude-code)) | `ANTHROPIC_API_KEY` ([get key](https://console.anthropic.com/)) |
+| 1 | **Codex CLI** | `npm install -g @openai/codex` ([repo](https://github.com/openai/codex)) | `OPENAI_API_KEY` ([get key](https://platform.openai.com/api-keys)) |
+| 2 | **Opencode CLI** | `curl -fsSL https://opencode.ai/install | bash` ([repo](https://github.com/opencode-ai/opencode)) | Depends on configured provider |
+| 3 | **Gemini CLI** | `npm install -g @anthropic-ai/claude-code && npx @anthropic-ai/claude-code` or `npm install -g @google/gemini-cli` ([repo](https://github.com/google-gemini/gemini-cli)) | `GEMINI_API_KEY` ([get key](https://aistudio.google.com/apikey)) |
+
+> **You only need 1 CLI** to get started. Claude Code (slot 0) is recommended as the primary fixer. Add others to run more fixers in parallel.
+
+### External Services
+
+| Service | Purpose | Sign Up | What You Need |
+|---------|---------|---------|---------------|
+| **Linear** | Issue tracking — fixers pull issues from here | [linear.app](https://linear.app) (free tier works) | API key + Team ID + Team key |
+| **Telegram** | Notifications + AI chat relay | [telegram.org](https://telegram.org) | Bot token (via [@BotFather](https://t.me/BotFather)) + your Chat ID (via [@userinfobot](https://t.me/userinfobot)) |
+| **Groq** *(optional)* | Voice message transcription (Whisper) | [console.groq.com](https://console.groq.com) | API key (`gsk_...`) |
+
+### Development Tools
+
+| Tool | Purpose | Install |
+|------|---------|---------|
+| **VS Code** | Recommended editor — great for reviewing auto-fix diffs | [code.visualstudio.com](https://code.visualstudio.com) |
+| **Git Graph** *(VS Code extension)* | Visualize branches and auto-fix commits | Install from VS Code Extensions: search "Git Graph" by mhutchie |
+| **Python 3.10+** | Runs precheck, Linear tool, Telegram scripts | `brew install python3` or [python.org](https://www.python.org/downloads/) |
+| **Node.js 18+** | Required for npm-based CLI installs | `brew install node` or [nodejs.org](https://nodejs.org) |
+| **icalBuddy** *(optional)* | Calendar integration for heartbeat | `brew install ical-buddy` |
+
+### Quick Install (macOS)
+
+```bash
+# Install Homebrew (if you don't have it)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install prerequisites
+brew install python3 node git
+
+# Install Claude Code (primary fixer)
+npm install -g @anthropic-ai/claude-code
+
+# Optional: Install additional CLIs for parallel fixing
+npm install -g @openai/codex                    # Codex (slot 1)
+curl -fsSL https://opencode.ai/install | bash   # Opencode (slot 2)
+npm install -g @google/gemini-cli               # Gemini (slot 3)
+
+# Optional: Calendar integration
+brew install ical-buddy
+```
+
+---
+
 ## Need Help?
 
 - **Operations reference**: [cookbooks/AUTOMATION-COOKBOOK.md](./cookbooks/AUTOMATION-COOKBOOK.md)
