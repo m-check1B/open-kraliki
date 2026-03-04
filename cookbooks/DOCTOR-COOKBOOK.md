@@ -16,7 +16,7 @@ launchctl list | grep com.automation && \
 echo "=== LOCK FILES ===" && \
 ls -la ~/logs/*/orchestrator.lock ~/logs/*/*.lock 2>/dev/null || echo "(no locks)" && \
 echo "=== RECENT LOGS ===" && \
-for d in fixer-orchestrator claude-fixer codex-fixer opencode-fixer gemini-fixer watchdog heartbeat relay; do \
+for d in fixer-orchestrator claude-fixer codex-fixer opencode-fixer watchdog heartbeat relay; do \
   latest=$(ls -t ~/logs/$d/*.log 2>/dev/null | head -1); \
   [ -n "$latest" ] && echo "  $d: $latest ($(wc -l < "$latest") lines)"; \
 done
@@ -83,7 +83,6 @@ done
 | `~/logs/claude-fixer/state.json` | Claude fixer attempt tracking |
 | `~/logs/codex-fixer/state.json` | Codex fixer attempt tracking |
 | `~/logs/opencode-fixer/state.json` | Opencode fixer attempt tracking |
-| `~/logs/gemini-fixer/state.json` | Gemini fixer attempt tracking |
 
 ### Common State Operations
 
@@ -210,14 +209,12 @@ launchctl load ~/Library/LaunchAgents/com.automation.telegram-relay.plist
 pkill -f "claude.*--print"
 pkill -f "codex.*exec"
 pkill -f "opencode.*run"
-pkill -f "gemini.*-p"
 
 # 2. Clear all lock files
 rm -f ~/logs/fixer-orchestrator/orchestrator.lock
 rm -f ~/logs/claude-fixer/claude-fixer.lock
 rm -f ~/logs/codex-fixer/codex-fixer.lock
 rm -f ~/logs/opencode-fixer/opencode-fixer.lock
-rm -f ~/logs/gemini-fixer/gemini-fixer.lock
 
 # 3. Reset git state in project
 cd $PROJECT_DIR
@@ -238,11 +235,10 @@ launchctl unload ~/Library/LaunchAgents/com.automation.*.plist
 pkill -f "claude.*--print"
 pkill -f "codex.*exec"
 pkill -f "opencode.*run"
-pkill -f "gemini.*-p"
 pkill -f telegram-relay
 
 # 3. Clear all state and locks
-for fixer in claude-fixer codex-fixer opencode-fixer gemini-fixer; do
+for fixer in claude-fixer codex-fixer opencode-fixer; do
   echo '{"attempted":{}}' > ~/logs/$fixer/state.json
   rm -f ~/logs/$fixer/$fixer.lock
 done
@@ -286,7 +282,7 @@ cd $PROJECT_DIR 2>/dev/null && git log --since="2 hours ago" --oneline | head -5
 
 echo ""
 echo "Fixer state:"
-for fixer in claude-fixer codex-fixer opencode-fixer gemini-fixer; do
+for fixer in claude-fixer codex-fixer opencode-fixer; do
   if [ -f ~/logs/$fixer/state.json ]; then
     maxed=$(python3 -c "
 import json

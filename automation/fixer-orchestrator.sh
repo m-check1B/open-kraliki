@@ -8,7 +8,7 @@
 #
 # LaunchAgent: com.automation.fixer-orchestrator
 # Schedule: Every 15 minutes
-# Parallel: Claude Fixer (slot 0) | Codex Fixer (slot 1) | Opencode Fixer (slot 2) | Gemini Fixer (slot 3)
+# Parallel: Claude Fixer (slot 0) | Codex Fixer (slot 1) | Opencode Fixer (slot 2)
 
 set -euo pipefail
 
@@ -52,7 +52,7 @@ echo $$ > "$LOCKFILE"
 trap 'rm -f "$LOCKFILE"' EXIT
 
 # ── Fixer definitions ───────────────────────────────────────────
-FIXERS=("claude" "codex" "opencode" "gemini")
+FIXERS=("claude" "codex" "opencode")
 FIXER_PIDS=()
 FIXER_LOGS=()
 FIXER_EXITS=()

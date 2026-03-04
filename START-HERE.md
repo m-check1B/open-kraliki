@@ -17,9 +17,8 @@ Before we start, make sure you have these on your Mac:
   - [ ] `claude` → [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (`npm install -g @anthropic-ai/claude-code`)
   - [ ] `codex` → [Codex CLI](https://github.com/openai/codex) (optional, slot 1)
   - [ ] `opencode` → [Opencode CLI](https://github.com/opencode-ai/opencode) (optional, slot 2)
-  - [ ] `gemini` → [Gemini CLI](https://github.com/google-gemini/gemini-cli) (optional, slot 3)
 
-> **Don't have all 4?** That's fine. You can run with just 1 CLI. We'll disable the others.
+> **Don't have all 3?** That's fine. You can run with just 1 CLI. We'll disable the others.
 
 ---
 
@@ -208,8 +207,8 @@ If all three check out — **congratulations, your automation is live**.
 Edit the `FIXERS` array in `automation/fixer-orchestrator.sh`:
 
 ```bash
-# Default: all 4 fixers
-FIXERS=("claude" "codex" "opencode" "gemini")
+# Default: all 3 fixers
+FIXERS=("claude" "codex" "opencode")
 
 # Example: only Claude and Codex
 FIXERS=("claude" "codex")
@@ -439,7 +438,6 @@ Everything this system uses, with install links.
 | 0 | **Claude Code** | `npm install -g @anthropic-ai/claude-code` ([docs](https://docs.anthropic.com/en/docs/claude-code)) | `ANTHROPIC_API_KEY` ([get key](https://console.anthropic.com/)) |
 | 1 | **Codex CLI** | `npm install -g @openai/codex` ([repo](https://github.com/openai/codex)) | `OPENAI_API_KEY` ([get key](https://platform.openai.com/api-keys)) |
 | 2 | **Opencode CLI** | `curl -fsSL https://opencode.ai/install | bash` ([repo](https://github.com/opencode-ai/opencode)) | Depends on configured provider |
-| 3 | **Gemini CLI** | `npm install -g @google/gemini-cli` ([repo](https://github.com/google-gemini/gemini-cli)) | `GEMINI_API_KEY` ([get key](https://aistudio.google.com/apikey)) |
 
 > **You only need 1 CLI** to get started. Claude Code (slot 0) is recommended as the primary fixer. Add others to run more fixers in parallel.
 
@@ -476,7 +474,6 @@ npm install -g @anthropic-ai/claude-code
 # Optional: Install additional CLIs for parallel fixing
 npm install -g @openai/codex                    # Codex (slot 1)
 curl -fsSL https://opencode.ai/install | bash   # Opencode (slot 2)
-npm install -g @google/gemini-cli               # Gemini (slot 3)
 
 # Optional: Calendar integration
 brew install ical-buddy

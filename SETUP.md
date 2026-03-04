@@ -7,7 +7,7 @@ Step-by-step installation checklist for Kraliki OS automation.
 - [ ] macOS (launchd required)
 - [ ] Python 3.10+ (`python3 --version`)
 - [ ] Git with SSH access to your repo
-- [ ] At least one AI coding CLI installed (`claude`, `codex`, `opencode`, or `gemini`)
+- [ ] At least one AI coding CLI installed (`claude`, `codex`, or `opencode`)
 
 ## Installation Steps
 

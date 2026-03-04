@@ -126,9 +126,6 @@ case "$HEARTBEAT_CLI" in
   *opencode*)
     CLI_ARGS+=(run --agent build)
     ;;
-  *gemini*)
-    CLI_ARGS+=(-p --sandbox false)
-    ;;
   *)
     # Unknown CLI: just pipe prompt via stdin
     ;;

@@ -149,9 +149,9 @@ def filter_issues(issues: list[dict], state: dict) -> list[dict]:
 
 def split_by_slot(issues: list[dict]) -> list[dict]:
     """Split issues between fixers based on FIXER_SLOT."""
-    if FIXER_SLOT in ("0", "1", "2", "3"):
+    if FIXER_SLOT in ("0", "1", "2"):
         slot = int(FIXER_SLOT)
-        return [q for idx, q in enumerate(issues) if idx % 4 == slot]
+        return [q for idx, q in enumerate(issues) if idx % 3 == slot]
     elif FIXER_SLOT == "even":
         return [q for idx, q in enumerate(issues) if idx % 2 == 0]
     elif FIXER_SLOT == "odd":
