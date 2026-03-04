@@ -351,7 +351,7 @@ You (Telegram)                        Bot
 "What's the status of PROJ-42?"  →  Checks Linear, replies with details
 "Fix the typo in config.ts"     →  Reads the file, edits it, commits
 "List open P0 issues"            →  Queries Linear, sends summary
-🎤 (voice message)               →  Transcribes via Groq → processes as text
+🎤 (voice message)               →  Transcribes → processes → replies with voice
 "Summarize today's commits"      →  Runs git log, sends digest
 ```
 
@@ -395,10 +395,12 @@ cat ~/logs/relay/conversations/$(date +%Y-%m-%d).jsonl
 If you set `GROQ_API_KEY` in your `.env`:
 
 - [ ] Send a voice message to the bot in Telegram
-- [ ] The bot transcribes it via Groq Whisper and processes it as text
-- [ ] You get a text response back
+- [ ] The bot transcribes it via Groq Whisper, processes it, and **replies with a voice message** (text in → text out, voice in → voice out)
+- [ ] Requires `ffmpeg` for voice replies: `brew install ffmpeg`
 
 > **Language:** Voice transcription defaults to English. To change it, set `WHISPER_LANGUAGE` in your `.env` (e.g., `cs` for Czech, `de` for German, `es` for Spanish).
+>
+> **Voice:** The reply voice defaults to "Ava (Premium)". Run `say -v '?'` to see all available macOS voices, then set `RELAY_TTS_VOICE` in your `.env`.
 
 ### Customize the personality
 

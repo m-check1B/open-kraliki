@@ -12,6 +12,7 @@ Env vars:
   PA_OWNER_CHAT_ID    — Owner's Telegram chat ID (required)
   GROQ_API_KEY        — Groq API key for voice transcription (optional)
   WHISPER_LANGUAGE    — Language code for voice transcription (default: "en")
+  RELAY_TTS_VOICE     — macOS say voice for voice replies (default: "Ava (Premium)")
   RELAY_CLI_CMD       — CLI command to invoke, e.g. "claude --print" (default: "claude --print")
   RELAY_CLI_TIMEOUT   — Max seconds for CLI response (default: 120)
   RELAY_ACTIVE_START  — Hour to start accepting messages (default: 8)
@@ -69,6 +70,7 @@ BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 CHAT_ID = os.environ.get("PA_OWNER_CHAT_ID", "")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 WHISPER_LANGUAGE = os.environ.get("WHISPER_LANGUAGE", "en")
+TTS_VOICE = os.environ.get("RELAY_TTS_VOICE", "Ava (Premium)")  # macOS say voice
 
 CLI_CMD = os.environ.get("RELAY_CLI_CMD", "claude --print")
 CLI_TIMEOUT = int(os.environ.get("RELAY_CLI_TIMEOUT", os.environ.get("FIX_TIMEOUT", "120")))
@@ -172,6 +174,79 @@ def send_message(text: str, reply_to: int | None = None) -> bool:
                 return json.loads(resp.read()).get("ok", False)
         except Exception:
             return False
+
+
+def text_to_voice(text: str) -> str | None:
+    """Convert text to OGG voice file using macOS 'say' + ffmpeg."""
+    aiff_path = None
+    ogg_path = None
+    try:
+        fd, aiff_path = tempfile.mkstemp(suffix=".aiff")
+        os.close(fd)
+        # Generate speech with macOS say
+        result = subprocess.run(
+            ["say", "-v", TTS_VOICE, "-o", aiff_path, text[:2000]],
+            capture_output=True, timeout=30,
+        )
+        if result.returncode != 0:
+            log(f"say failed: {result.stderr.decode()}")
+            return None
+        # Convert AIFF to OGG (opus) for Telegram
+        fd2, ogg_path = tempfile.mkstemp(suffix=".ogg")
+        os.close(fd2)
+        result = subprocess.run(
+            ["ffmpeg", "-y", "-i", aiff_path, "-c:a", "libopus", "-b:a", "48k", ogg_path],
+            capture_output=True, timeout=30,
+        )
+        if result.returncode != 0:
+            log(f"ffmpeg failed: {result.stderr.decode()[:200]}")
+            return None
+        return ogg_path
+    except FileNotFoundError as e:
+        log(f"TTS requires 'say' and 'ffmpeg': {e}")
+        return None
+    except Exception as e:
+        log(f"text_to_voice failed: {e}")
+        return None
+    finally:
+        if aiff_path and os.path.exists(aiff_path):
+            os.unlink(aiff_path)
+
+
+def send_voice_message(ogg_path: str, reply_to: int | None = None) -> bool:
+    """Send a voice message via Telegram Bot API."""
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendVoice"
+    boundary = f"----Boundary{os.urandom(8).hex()}"
+    try:
+        with open(ogg_path, "rb") as f:
+            audio_data = f.read()
+        parts = []
+        # chat_id field
+        parts.append(f"--{boundary}\r\n".encode())
+        parts.append(b'Content-Disposition: form-data; name="chat_id"\r\n\r\n')
+        parts.append(CHAT_ID.encode() + b"\r\n")
+        # voice file
+        parts.append(f"--{boundary}\r\n".encode())
+        parts.append(b'Content-Disposition: form-data; name="voice"; filename="reply.ogg"\r\n')
+        parts.append(b"Content-Type: audio/ogg\r\n\r\n")
+        parts.append(audio_data)
+        parts.append(b"\r\n")
+        # reply_to_message_id
+        if reply_to:
+            parts.append(f"--{boundary}\r\n".encode())
+            parts.append(b'Content-Disposition: form-data; name="reply_to_message_id"\r\n\r\n')
+            parts.append(str(reply_to).encode() + b"\r\n")
+        parts.append(f"--{boundary}--\r\n".encode())
+        body = b"".join(parts)
+        req = Request(
+            url, data=body,
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+        )
+        with urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read()).get("ok", False)
+    except Exception as e:
+        log(f"sendVoice failed: {e}")
+        return False
 
 
 def get_file_url(file_id: str) -> str | None:
@@ -377,7 +452,9 @@ def process_message(update: dict):
         return
 
     # Handle voice messages via transcription
+    is_voice = False
     if voice and not text:
+        is_voice = True
         file_id = voice.get("file_id")
         log(f"Voice message received (file_id: {file_id})")
         send_typing(chat_id)
@@ -413,6 +490,21 @@ def process_message(update: dict):
     log(f"CLI response ({len(response)} chars): {response[:80]}...")
 
     log_conversation(text, response, msg_id)
+
+    # Voice in → voice out, text in → text out
+    if is_voice:
+        ogg_reply = text_to_voice(response)
+        if ogg_reply:
+            try:
+                success = send_voice_message(ogg_reply, reply_to=msg_id)
+            finally:
+                os.unlink(ogg_reply)
+            if success:
+                log("Voice reply sent successfully")
+                return
+            log("sendVoice failed, falling back to text")
+        else:
+            log("TTS failed, falling back to text")
 
     success = send_message(response, reply_to=msg_id)
     if success:

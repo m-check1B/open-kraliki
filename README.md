@@ -17,7 +17,7 @@ Most "AI coding" tools require you to sit there and prompt them. This runs **una
 - **Multi-CLI failover** — runs up to 4 AI coding CLIs (Claude, Codex, Opencode, Kimi). If one can't fix an issue after 3 attempts, it automatically escalates to the next CLI.
 - **Auto-detects installed CLIs** — only have Claude? It works. Install Codex later and it picks it up automatically.
 - **One-switch pause** — set `AUTOMATION_ENABLED=false` in `.env` to pause everything instantly. Set it back to `true` to resume. No uninstalling, no reconfiguring.
-- **Telegram chatbot** — message your bot from your phone to ask about code, check issues, or get status. Supports voice messages (via Groq Whisper).
+- **Telegram chatbot** — message your bot from your phone to ask about code, check issues, or get status. Voice in → voice out (Groq Whisper + macOS TTS).
 - **Heartbeat briefings** — every 30 minutes, get a Telegram summary of open issues, upcoming calendar events, and system health. Silent when nothing's happening ($0 cost).
 - **Self-healing** — a watchdog checks health every hour, kills stuck processes, resets failed state, and restarts crashed components.
 - **Zero dependencies beyond Python + Node** — no Docker, no databases, no cloud services to manage. Just macOS launchd, your repo, and API keys.
@@ -139,7 +139,7 @@ More than notifications — it's a full AI assistant on your phone:
 ```
 You: "What's the status of PROJ-42?"     →  Checks Linear, replies
 You: "Fix the typo in config.ts"         →  Reads file, edits, commits
-You: 🎤 (voice message)                  →  Transcribes → processes → replies
+You: 🎤 (voice message)                  →  Transcribes → processes → voice reply
 You: "List open P0 issues"               →  Queries Linear, sends summary
 ```
 
