@@ -15,9 +15,7 @@ AUTOMATION_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOGDIR="${HOME}/logs/heartbeat"
 TIMESTAMP="$(date +%Y-%m-%dT%H:%M:%SZ)"
 LOGFILE="${LOGDIR}/heartbeat-$(date +%Y%m%d-%H%M).log"
-LOG_RETENTION_DAYS=7
 ENV_FILE="${ENV_FILE:-$(cd "$AUTOMATION_DIR/.." && pwd)/.env}"
-HEARTBEAT_CLI="${HEARTBEAT_CLI:-claude}"
 PRECHECK_SCRIPT="${AUTOMATION_DIR}/heartbeat-precheck.py"
 PROMPT_FILE="${AUTOMATION_DIR}/../prompts/heartbeat.md"
 PERSONALITY_DIR="${AUTOMATION_DIR}/../personality"
@@ -32,6 +30,8 @@ if [ -f "$ENV_FILE" ]; then
   source "$ENV_FILE"
   set -e
 fi
+LOG_RETENTION_DAYS="${LOG_RETENTION_DAYS:-7}"
+HEARTBEAT_CLI="${HEARTBEAT_CLI:-claude}"
 
 # Rotate logs older than retention period
 find "$LOGDIR" -name 'heartbeat-*.log' -mtime +${LOG_RETENTION_DAYS} -delete 2>/dev/null || true
@@ -40,8 +40,8 @@ echo "=== Heartbeat: ${TIMESTAMP} ===" | tee "$LOGFILE"
 
 # ── Active hours gate ────────────────────────────────────────────
 HOUR=$(date +%H)
-ACTIVE_START="${ACTIVE_START:-8}"
-ACTIVE_END="${ACTIVE_END:-23}"
+ACTIVE_START="${HEARTBEAT_ACTIVE_START:-${ACTIVE_START:-8}}"
+ACTIVE_END="${HEARTBEAT_ACTIVE_END:-${ACTIVE_END:-23}}"
 
 if [ "$HOUR" -lt "$ACTIVE_START" ] || [ "$HOUR" -ge "$ACTIVE_END" ]; then
   echo "Outside active hours (${ACTIVE_START}-${ACTIVE_END}), skipping." | tee -a "$LOGFILE"

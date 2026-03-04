@@ -62,7 +62,7 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 WHISPER_LANGUAGE = os.environ.get("WHISPER_LANGUAGE", "en")
 
 CLI_CMD = os.environ.get("RELAY_CLI_CMD", "claude --print")
-CLI_TIMEOUT = int(os.environ.get("RELAY_CLI_TIMEOUT", "120"))
+CLI_TIMEOUT = int(os.environ.get("RELAY_CLI_TIMEOUT", os.environ.get("FIX_TIMEOUT", "120")))
 ACTIVE_START = int(os.environ.get("RELAY_ACTIVE_START", "8"))
 ACTIVE_END = int(os.environ.get("RELAY_ACTIVE_END", "23"))
 POLL_INTERVAL = int(os.environ.get("RELAY_POLL_INTERVAL", "3"))

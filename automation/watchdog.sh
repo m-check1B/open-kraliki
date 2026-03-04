@@ -18,7 +18,6 @@ LOGDIR="${HOME}/logs/watchdog"
 LOCKFILE="${LOGDIR}/watchdog.lock"
 TIMESTAMP="$(date +%Y-%m-%dT%H:%M:%SZ)"
 LOGFILE="${LOGDIR}/watchdog-$(date +%Y%m%d-%H%M).log"
-LOG_RETENTION_DAYS=7
 ENV_FILE="${ENV_FILE:-$(cd "$AUTOMATION_DIR/.." && pwd)/.env}"
 RECOVERY_CLI="${RECOVERY_CLI:-opencode}"
 SEND_TELEGRAM="${AUTOMATION_DIR}/send-telegram.py"
@@ -41,6 +40,7 @@ if [ -f "$ENV_FILE" ]; then
   set -e
 fi
 export PATH="/opt/homebrew/bin:${PATH}"
+LOG_RETENTION_DAYS="${LOG_RETENTION_DAYS:-7}"
 
 # Rotate logs older than retention period
 find "$LOGDIR" -name 'watchdog-*.log' -mtime +${LOG_RETENTION_DAYS} -delete 2>/dev/null || true
@@ -348,8 +348,9 @@ ${RECOVERY_STEPS}
 Execute the recovery steps above. Verify each fix worked. Do NOT create new files. Only fix existing processes. Be surgical and fast."
 
 cd "${PROJECT_DIR}"
+WATCHDOG_TIMEOUT="${WATCHDOG_RECOVERY_TIMEOUT:-300}"
 # macOS-safe timeout using perl alarm (no GNU coreutils needed)
-RECOVERY_OUTPUT=$(echo "$RECOVERY_PROMPT" | perl -e 'alarm 300; exec @ARGV' "$RECOVERY_CLI" run 2>&1) || true
+RECOVERY_OUTPUT=$(echo "$RECOVERY_PROMPT" | perl -e "alarm $WATCHDOG_TIMEOUT; exec @ARGV" "$RECOVERY_CLI" run 2>&1) || true
 echo "$RECOVERY_OUTPUT" | tail -50 | tee -a "$LOGFILE"
 
 # ── Send Telegram alert ──────────────────────────────────────────
