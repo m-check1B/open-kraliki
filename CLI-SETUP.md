@@ -80,16 +80,20 @@ Opencode also works with any other provider (OpenAI, Anthropic, Groq, local mode
 
 ```bash
 # Install
-pip install kimi-cli
+curl -L code.kimi.com/install.sh | bash
+# Or: pip install kimi-cli
 
-# Authenticate (opens browser for Kimi account login)
+# Authenticate
 kimi auth login
+# → Enter your Kimi Code API key
 
 # Verify
 kimi --version
 ```
 
-**Auth:** Subscribe to [Kimi Membership](https://www.kimi.com/code/en) — your subscription includes an API key. Get it from the Kimi Code Console, then enter it when `kimi auth login` prompts you. Quota refreshes on a 7-day rolling cycle.
+**Auth:** You need the **Kimi Code** plan (the coding-specific plan, not the regular Kimi chat membership). Subscribe at [kimi.com/membership/pricing](https://www.kimi.com/membership/pricing), then get your API key from the [Kimi Code Console](https://www.kimi.com/code/console). Quota refreshes on a 7-day rolling cycle.
+
+> **Important:** Kimi has separate chat and coding plans. You need the **coding** plan for CLI access.
 
 **Docs:** [kimi.com/code/docs](https://www.kimi.com/code/docs/en/benefits.html) | [github.com/MoonshotAI/kimi-cli](https://github.com/MoonshotAI/kimi-cli)
 
@@ -111,7 +115,7 @@ npm install -g @openai/codex
 curl -fsSL https://opencode.ai/install | bash
 
 # Slot 3: Kimi Code CLI
-pip install kimi-cli
+curl -L code.kimi.com/install.sh | bash
 ```
 
 Then authenticate each one you installed:
@@ -132,7 +136,7 @@ kimi auth login     # Slot 3 — follow browser auth
 | Claude Pro/Max plan | Claude Code (slot 0) | Browser login to plan |
 | OpenAI / ChatGPT plan | Codex CLI (slot 1) | Browser login to plan |
 | Nothing yet, want cheapest | Opencode + [Z.AI Coding Plan](https://z.ai/subscribe) (~$3/mo) | API key from subscription |
-| Kimi Membership | Kimi Code CLI (slot 3) | API key from subscription |
+| Kimi Code plan | Kimi Code CLI (slot 3) | API key from subscription |
 
 Start with one. The orchestrator auto-detects installed CLIs and skips missing ones. Add more anytime — issues automatically redistribute.
 

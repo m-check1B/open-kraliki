@@ -546,7 +546,7 @@ Everything this system uses, with install links.
 | 0 | **Claude Code** | `npm install -g @anthropic-ai/claude-code` | [Claude Pro/Max](https://claude.ai/upgrade) plan → `claude` (browser login) |
 | 1 | **Codex CLI** | `npm install -g @openai/codex` | [OpenAI](https://platform.openai.com/) plan → `codex auth login` (browser login) |
 | 2 | **Opencode CLI** | `curl -fsSL https://opencode.ai/install \| bash` | [Z.AI Coding Plan](https://z.ai/subscribe) subscription → API key → `opencode auth login` |
-| 3 | **Kimi Code CLI** | `pip install kimi-cli` | [Kimi Membership](https://www.kimi.com/code/en) subscription → API key → `kimi auth login` |
+| 3 | **Kimi Code CLI** | `curl -L code.kimi.com/install.sh \| bash` | [Kimi Code plan](https://www.kimi.com/membership/pricing) (not chat plan) → API key from [Code Console](https://www.kimi.com/code/console) → `kimi auth login` |
 
 > **You only need 1 CLI** to get started. Claude Code (slot 0) is recommended as the primary fixer. Add others for more coverage. See **[CLI-SETUP.md](./CLI-SETUP.md)** for detailed setup instructions for each CLI.
 
@@ -583,7 +583,7 @@ npm install -g @anthropic-ai/claude-code
 # Optional: Install additional CLIs for more fixing coverage
 npm install -g @openai/codex                    # Codex (slot 1)
 curl -fsSL https://opencode.ai/install | bash   # Opencode (slot 2)
-pip install kimi-cli                            # Kimi Code (slot 3)
+curl -L code.kimi.com/install.sh | bash                            # Kimi Code (slot 3)
 
 # Optional: Calendar integration
 brew install ical-buddy

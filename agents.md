@@ -9,7 +9,7 @@ How the AI coding agents are configured, assigned work, and interact with each o
 | 0 | Claude Code | `npm install -g @anthropic-ai/claude-code` | `automation/fixers/claude-fixer.sh` |
 | 1 | Codex CLI | `npm install -g @openai/codex` | `automation/fixers/codex-fixer.sh` |
 | 2 | Opencode CLI | `curl -fsSL https://opencode.ai/install \| bash` | `automation/fixers/opencode-fixer.sh` |
-| 3 | Kimi Code CLI | `pip install kimi-cli` | `automation/fixers/kimi-fixer.sh` |
+| 3 | Kimi Code CLI | `curl -L code.kimi.com/install.sh | bash` | `automation/fixers/kimi-fixer.sh` |
 
 **You only need 1 CLI.** The orchestrator auto-detects which CLIs are installed and skips missing ones.
 
