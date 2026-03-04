@@ -60,7 +60,7 @@ done
 
 | Symptom | Diagnosis | Fix |
 |---------|-----------|-----|
-| Heartbeat never fires | Outside active hours or plist not loaded | Verify: `launchctl list \| grep heartbeat`. Check `ACTIVE_START`/`ACTIVE_END` env vars. |
+| Heartbeat never fires | Outside active hours or plist not loaded | Verify: `launchctl list \| grep heartbeat`. Check `HEARTBEAT_ACTIVE_START`/`HEARTBEAT_ACTIVE_END` env vars. |
 | Heartbeat fires but no Telegram | Precheck found nothing (normal, saves cost) or Telegram send failed | Check heartbeat logs. If precheck returns no findings, this is expected behavior. |
 | Calendar check fails | `icalBuddy` not installed | Install: `brew install ical-buddy` (macOS only). |
 

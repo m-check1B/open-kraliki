@@ -310,12 +310,16 @@ def call_cli(prompt: str, system_context: str) -> str:
     env.pop("CLAUDECODE", None)
 
     cmd_parts = CLI_CMD.split()
-    cmd = cmd_parts + [
-        "--dangerously-skip-permissions",
-        "--no-session-persistence",
-    ]
-    if system_context:
-        cmd += ["--append-system-prompt", system_context]
+    cmd = list(cmd_parts)
+
+    # Add CLI-specific flags (only for CLIs that support them)
+    cli_name = cmd_parts[0].lower()
+    if "claude" in cli_name:
+        cmd += ["--dangerously-skip-permissions", "--no-session-persistence"]
+        if system_context:
+            cmd += ["--append-system-prompt", system_context]
+    elif "codex" in cli_name:
+        cmd += ["--quiet"]
 
     try:
         result = subprocess.run(

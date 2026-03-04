@@ -110,12 +110,25 @@ if [ -d "$PERSONALITY_DIR" ]; then
   done
 fi
 
-RESPONSE=$(echo "$PROMPT" | "$HEARTBEAT_CLI" --print \
-  --dangerously-skip-permissions \
-  --no-session-persistence \
-  --append-system-prompt "$SYSTEM_CONTEXT" \
-  --allowedTools "Read,Grep,Glob" \
-  2>&1) || true
+# Build CLI arguments (CLI-agnostic: only add flags the CLI supports)
+CLI_ARGS=()
+case "$HEARTBEAT_CLI" in
+  *claude*)
+    CLI_ARGS+=(--print --dangerously-skip-permissions --no-session-persistence)
+    if [ -n "$SYSTEM_CONTEXT" ]; then
+      CLI_ARGS+=(--append-system-prompt "$SYSTEM_CONTEXT")
+    fi
+    CLI_ARGS+=(--allowedTools "Read,Grep,Glob")
+    ;;
+  *codex*)
+    CLI_ARGS+=(--quiet)
+    ;;
+  *)
+    # Generic: just pipe prompt via stdin, most CLIs accept that
+    ;;
+esac
+
+RESPONSE=$(echo "$PROMPT" | "$HEARTBEAT_CLI" "${CLI_ARGS[@]}" 2>&1) || true
 
 echo "CLI response:" | tee -a "$LOGFILE"
 echo "$RESPONSE" | tee -a "$LOGFILE"

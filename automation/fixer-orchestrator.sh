@@ -14,11 +14,20 @@ set -euo pipefail
 
 # ── Configuration ────────────────────────────────────────────────
 AUTOMATION_DIR="$(cd "$(dirname "$0")" && pwd)"
+ENV_FILE="${ENV_FILE:-$(cd "$AUTOMATION_DIR/.." && pwd)/.env}"
 LOGDIR="${HOME}/logs/fixer-orchestrator"
 LOCKFILE="${LOGDIR}/orchestrator.lock"
 TIMESTAMP="$(date +%Y-%m-%dT%H:%M:%SZ)"
 LOGFILE="${LOGDIR}/orchestrator-$(date +%Y%m%d-%H%M).log"
-LOG_RETENTION_DAYS=7
+
+# Source env vars (launchd doesn't inherit shell env)
+if [ -f "$ENV_FILE" ]; then
+  set +e
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set -e
+fi
+LOG_RETENTION_DAYS="${LOG_RETENTION_DAYS:-7}"
 
 mkdir -p "$LOGDIR"
 

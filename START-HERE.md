@@ -205,13 +205,20 @@ If all three check out — **congratulations, your automation is live**.
 
 ### Only have 1-2 CLIs?
 
-Edit `automation/fixer-orchestrator.sh` and comment out the fixers you don't have:
+Edit the `FIXERS` array in `automation/fixer-orchestrator.sh`:
 
 ```bash
-# Comment out slots you don't use:
-# bash "${AUTOMATION_DIR}/fixers/codex-fixer.sh" > "$CODEX_LOG" 2>&1 &
-# bash "${AUTOMATION_DIR}/fixers/gemini-fixer.sh" > "$GEMINI_LOG" 2>&1 &
+# Default: all 4 fixers
+FIXERS=("claude" "codex" "opencode" "gemini")
+
+# Example: only Claude and Codex
+FIXERS=("claude" "codex")
+
+# Example: Claude only
+FIXERS=("claude")
 ```
+
+Each entry maps to `automation/fixers/<name>-fixer.sh`. Remove entries for CLIs you don't have installed.
 
 ### Change the issue prefix
 
