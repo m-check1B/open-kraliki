@@ -312,7 +312,7 @@ def call_cli(prompt: str, system_context: str) -> str:
     cmd_parts = CLI_CMD.split()
     cmd = list(cmd_parts)
 
-    # Add CLI-specific flags (only for CLIs that support them)
+    # Add CLI-specific flags (each CLI has its own interface)
     cli_name = cmd_parts[0].lower()
     if "claude" in cli_name:
         cmd += ["--dangerously-skip-permissions", "--no-session-persistence"]
@@ -320,6 +320,10 @@ def call_cli(prompt: str, system_context: str) -> str:
             cmd += ["--append-system-prompt", system_context]
     elif "codex" in cli_name:
         cmd += ["--quiet"]
+    elif "opencode" in cli_name:
+        cmd += ["run", "--agent", "build"]
+    elif "gemini" in cli_name:
+        cmd += ["-p", "--sandbox", "false"]
 
     try:
         result = subprocess.run(

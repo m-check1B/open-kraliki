@@ -110,7 +110,7 @@ if [ -d "$PERSONALITY_DIR" ]; then
   done
 fi
 
-# Build CLI arguments (CLI-agnostic: only add flags the CLI supports)
+# Build CLI arguments (each CLI has its own flags)
 CLI_ARGS=()
 case "$HEARTBEAT_CLI" in
   *claude*)
@@ -123,8 +123,14 @@ case "$HEARTBEAT_CLI" in
   *codex*)
     CLI_ARGS+=(--quiet)
     ;;
+  *opencode*)
+    CLI_ARGS+=(run --agent build)
+    ;;
+  *gemini*)
+    CLI_ARGS+=(-p --sandbox false)
+    ;;
   *)
-    # Generic: just pipe prompt via stdin, most CLIs accept that
+    # Unknown CLI: just pipe prompt via stdin
     ;;
 esac
 
