@@ -33,10 +33,30 @@ fi
 LOG_RETENTION_DAYS="${LOG_RETENTION_DAYS:-7}"
 HEARTBEAT_CLI="${HEARTBEAT_CLI:-claude}"
 
+# ── On/Off switch (exit early if automation is paused) ─────────
+if [ "${AUTOMATION_ENABLED:-true}" = "false" ]; then
+  echo "Automation is paused (AUTOMATION_ENABLED=false). Skipping."
+  exit 0
+fi
+
 # Rotate logs older than retention period
 find "$LOGDIR" -name 'heartbeat-*.log' -mtime +${LOG_RETENTION_DAYS} -delete 2>/dev/null || true
 
 echo "=== Heartbeat: ${TIMESTAMP} ===" | tee "$LOGFILE"
+
+# ── Lock file (prevent overlapping runs) ─────────────────────────
+LOCKFILE="${LOGDIR}/heartbeat.lock"
+if [ -f "$LOCKFILE" ]; then
+  LOCK_PID=$(cat "$LOCKFILE" 2>/dev/null || echo "")
+  if [ -n "$LOCK_PID" ] && kill -0 "$LOCK_PID" 2>/dev/null; then
+    echo "Another heartbeat is running (PID ${LOCK_PID}), skipping." | tee -a "$LOGFILE"
+    exit 0
+  else
+    rm -f "$LOCKFILE"
+  fi
+fi
+echo $$ > "$LOCKFILE"
+trap 'rm -f "$LOCKFILE"' EXIT
 
 # ── Active hours gate ────────────────────────────────────────────
 HOUR=$(date +%H)
@@ -128,7 +148,7 @@ case "$HEARTBEAT_CLI" in
     CLI_ARGS+=(--allowedTools "Read,Grep,Glob")
     ;;
   *codex*)
-    CLI_ARGS+=(exec --quiet)
+    CLI_ARGS+=(exec)
     ;;
   *opencode*)
     CLI_ARGS+=(run --agent build)
@@ -141,7 +161,9 @@ case "$HEARTBEAT_CLI" in
     ;;
 esac
 
-RESPONSE=$(echo "$PROMPT" | "$HEARTBEAT_CLI" "${CLI_ARGS[@]}" 2>&1) || true
+HEARTBEAT_TIMEOUT="${HEARTBEAT_TIMEOUT:-120}"
+# macOS-safe timeout using perl alarm (no GNU coreutils needed)
+RESPONSE=$(echo "$PROMPT" | perl -e "alarm $HEARTBEAT_TIMEOUT; exec @ARGV" "$HEARTBEAT_CLI" "${CLI_ARGS[@]}" 2>&1) || true
 
 echo "CLI response:" | tee -a "$LOGFILE"
 echo "$RESPONSE" | tee -a "$LOGFILE"

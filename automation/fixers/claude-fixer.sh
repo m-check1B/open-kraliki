@@ -33,6 +33,12 @@ ISSUE_PREFIX="${ISSUE_PREFIX:-[AI-QA]}"
 COMMIT_PREFIX="${COMMIT_PREFIX:-[AI-FIX]}"
 # === END CONFIGURATION ===
 
+# ── On/Off switch (exit early if automation is paused) ─────────
+if [ "${AUTOMATION_ENABLED:-true}" = "false" ]; then
+  echo "Automation is paused (AUTOMATION_ENABLED=false). Skipping."
+  exit 0
+fi
+
 LOCKFILE="${LOGDIR}/claude-fixer.lock"
 STATE_FILE="${LOGDIR}/state.json"
 TIMESTAMP="$(date +%Y-%m-%dT%H:%M:%SZ)"
@@ -279,8 +285,7 @@ print(json.dumps(s))
   if [ "$PUSH_OK" = "false" ]; then
     echo "ERROR: git push failed after 3 attempts, reverting commit." | tee -a "$LOGFILE"
     git rebase --abort 2>/dev/null || true
-    git reset --soft HEAD~1 2>&1 | tee -a "$LOGFILE"
-    git checkout -- . 2>&1 | tee -a "$LOGFILE"
+    git reset --hard HEAD~1 2>&1 | tee -a "$LOGFILE"
     FAIL_COUNT=$((FAIL_COUNT + 1))
     continue
   fi

@@ -36,9 +36,9 @@ Edit `.env` and fill in:
 | `PROJECT_DIR` | Absolute path to your project repo |
 | `GROQ_API_KEY` | (Optional) [Groq Console](https://console.groq.com/keys) |
 
-Then source it in your shell:
+Then source it in your shell (safe to run multiple times):
 ```bash
-echo 'source ~/github/open-kraliki/.env' >> ~/.zshrc
+grep -qxF 'source ~/github/open-kraliki/.env' ~/.zshrc || echo 'source ~/github/open-kraliki/.env' >> ~/.zshrc
 source ~/.zshrc
 ```
 

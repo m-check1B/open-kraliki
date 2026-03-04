@@ -51,7 +51,18 @@ node --version      # Should show 18 or higher
 git --version       # Should show any version
 ```
 
-### 1.4 Install Claude Code (the AI that fixes your bugs)
+### 1.4 Set up your Git identity
+
+The automation commits code on your behalf, so Git needs to know your name:
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+```
+
+> **Already set?** Run `git config user.name` — if it shows your name, skip this step.
+
+### 1.5 Install Claude Code (the AI that fixes your bugs)
 
 ```bash
 npm install -g @anthropic-ai/claude-code
@@ -133,9 +144,11 @@ export PROJECT_DIR="$HOME/github/my-project-automation"  # The clone from 3.1
 - [ ] Run this so your settings load every time you open Terminal:
 
 ```bash
-echo 'source ~/github/open-kraliki/.env' >> ~/.zshrc
+grep -qxF 'source ~/github/open-kraliki/.env' ~/.zshrc || echo 'source ~/github/open-kraliki/.env' >> ~/.zshrc
 source ~/.zshrc
 ```
+
+> This is safe to run multiple times — it only adds the line if it's not already there.
 
 ### 3.4 Verify it worked
 
@@ -298,6 +311,23 @@ launchctl unload ~/Library/LaunchAgents/com.automation.fixer-orchestrator.plist
 launchctl load ~/Library/LaunchAgents/com.automation.fixer-orchestrator.plist
 ```
 
+### Pause everything (on/off switch)
+
+Want to pause the automation without uninstalling anything? Just flip one setting in `.env`:
+
+```bash
+# In your .env file:
+export AUTOMATION_ENABLED=false   # Pause — all scripts exit immediately
+export AUTOMATION_ENABLED=true    # Resume — back to normal
+```
+
+The launchd agents still fire on schedule, but every script checks this value first and exits immediately when set to `false`. Your hours, settings, and schedules stay untouched — flip it back to `true` and everything resumes exactly as before.
+
+**When to use this:**
+- Doing manual work on your project and don't want AI commits interfering
+- Debugging an issue and want peace and quiet
+- Going on vacation and want to save API costs
+
 ### Set active hours
 
 Don't want fixers running at 3am? Set in `.env`:
@@ -459,7 +489,19 @@ rm ~/logs/fixer-orchestrator/orchestrator.lock
 # → cookbooks/DOCTOR-COOKBOOK.md
 ```
 
-### Stop everything
+### Pause the automation (recommended)
+
+The easiest way — edit `.env` and set:
+
+```bash
+export AUTOMATION_ENABLED=false
+```
+
+Everything pauses instantly (on the next cycle). Set it back to `true` to resume.
+
+### Fully stop everything (nuclear option)
+
+This completely unloads the agents from macOS:
 
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.automation.*.plist

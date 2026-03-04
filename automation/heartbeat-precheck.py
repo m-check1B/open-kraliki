@@ -82,6 +82,9 @@ def check_linear() -> list[dict]:
         with urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read())
 
+        if "errors" in data:
+            return [{"error": f"Linear GraphQL error: {data['errors'][0].get('message', 'unknown')}"}]
+
         d = data.get("data", {})
         all_issues = d.get("mine", {}).get("nodes", []) + d.get("unassigned", {}).get("nodes", [])
 
@@ -163,7 +166,7 @@ def check_calendar() -> list[dict]:
                 events.append({"title": line, "start": "", "end": ""})
         return events
     except FileNotFoundError:
-        return [{"error": "icalBuddy not installed (brew install ical-buddy)"}]
+        return [{"warning": "icalBuddy not installed (brew install ical-buddy) — skipping calendar"}]
     except Exception as e:
         return [{"error": f"Calendar check failed: {e}"}]
 
@@ -203,7 +206,7 @@ def main():
         "telegram": check_telegram(),
     }
 
-    # Check for hard errors (API failures vs. just "nothing found")
+    # Check for hard errors, warnings, and actual findings
     has_error = False
     has_findings = False
     for key in ("linear", "calendar", "telegram"):
@@ -211,7 +214,9 @@ def main():
         for item in items:
             if "error" in item:
                 has_error = True
-            elif "warning" not in item:
+            elif "warning" in item:
+                has_findings = True  # Warnings are actionable (e.g., relay down)
+            else:
                 has_findings = True
 
     findings["has_findings"] = has_findings

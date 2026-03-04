@@ -22,6 +22,7 @@ Env vars:
 
 import json
 import os
+import shlex
 import signal
 import subprocess
 import sys
@@ -43,10 +44,15 @@ def _load_env():
             with open(path) as f:
                 for line in f:
                     line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
                     if line.startswith("export ") and "=" in line:
                         kv = line[len("export "):]
                         key, _, val = kv.partition("=")
-                        os.environ.setdefault(key.strip(), val.strip().strip("'\""))
+                        val = val.strip().strip("'\"")
+                        # Expand $HOME and $VAR references
+                        val = os.path.expandvars(val)
+                        os.environ.setdefault(key.strip(), val)
             break
 
 
@@ -99,6 +105,8 @@ def log_conversation(user_message: str, response: str, msg_id: int | None = None
     try:
         with open(log_path, "a") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        # Restrict log file permissions (contains user messages)
+        os.chmod(log_path, 0o600)
     except Exception as e:
         log(f"log_conversation failed: {e}")
 
@@ -313,7 +321,7 @@ def call_cli(prompt: str, system_context: str) -> str:
     env = os.environ.copy()
     env.pop("CLAUDECODE", None)
 
-    cmd_parts = CLI_CMD.split()
+    cmd_parts = shlex.split(CLI_CMD)
     cmd = list(cmd_parts)
 
     # Add CLI-specific flags (each CLI has its own interface)
@@ -323,7 +331,7 @@ def call_cli(prompt: str, system_context: str) -> str:
         if system_context:
             cmd += ["--append-system-prompt", system_context]
     elif "codex" in cli_name:
-        cmd += ["--quiet"]
+        pass  # codex uses its default flags
     elif "opencode" in cli_name:
         cmd += ["run", "--agent", "build"]
     elif "kimi" in cli_name:

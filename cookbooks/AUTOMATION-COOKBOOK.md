@@ -98,14 +98,16 @@ When another bot instance polls the same bot token, Telegram returns 409. Fix: s
 
 ### Issue Slot System
 
-Issues are split by index modulo 4 to prevent conflicts:
+Each issue is assigned to a fixer based on a stable hash of its identifier (e.g., `PROJ-42`). This ensures the same issue always goes to the same fixer, regardless of filtering order.
 
-| Slot | Fixer | Issues |
-|------|-------|--------|
-| 0 | Claude | #0, #4, #8, #12... |
-| 1 | Codex | #1, #5, #9, #13... |
-| 2 | Opencode | #2, #6, #10, #14... |
-| 3 | Kimi | #3, #7, #11, #15... |
+| Slot | Fixer |
+|------|-------|
+| 0 | Claude |
+| 1 | Codex |
+| 2 | Opencode |
+| 3 | Kimi |
+
+**Automatic escalation:** If a fixer fails on an issue 3 times, the issue automatically moves to the next fixer in line. For example: Claude fails 3x on PROJ-42 → Codex gets it. Codex fails 3x → Opencode gets it. If all fixers fail, the issue is truly stuck and needs manual attention.
 
 ### Fixer Flow (each slot)
 
@@ -182,7 +184,7 @@ tail -f ~/logs/watchdog/watchdog-*.log
 
 ## 4. Heartbeat
 
-**Purpose:** Periodic status briefing. Checks Linear issues, calendar events, and Telegram unreads. Sends summary via Telegram if anything noteworthy.
+**Purpose:** Periodic status briefing. Checks Linear issues, calendar events, and relay status. Sends summary via Telegram if anything noteworthy.
 
 | Field | Value |
 |-------|-------|
@@ -222,6 +224,7 @@ All configuration is via environment variables. See `env.example` for the full l
 
 | Variable | Used By | Required |
 |----------|---------|----------|
+| `AUTOMATION_ENABLED` | all scripts | No (default: true) |
 | `LINEAR_API_KEY` | precheck, linear-tool, heartbeat-precheck | Yes |
 | `LINEAR_TEAM_ID` | precheck, linear-tool, heartbeat-precheck | Yes |
 | `LINEAR_TEAM_KEY` | linear-tool | Yes |
@@ -249,7 +252,7 @@ All configuration is via environment variables. See `env.example` for the full l
 | Relay | `~/logs/relay/` |
 | Conversations | `~/logs/relay/conversations/` |
 
-All logs rotate automatically (7-day retention).
+Fixer, watchdog, and heartbeat logs rotate automatically (7-day retention). Relay conversation logs (`~/logs/relay/conversations/*.jsonl`) are kept indefinitely — delete manually if needed.
 
 ### State Files
 
@@ -270,7 +273,7 @@ State file format:
 }
 ```
 
-Issues with `fail_count >= 3` are skipped (need manual attention). Watchdog resets all counts when >80% are maxed out.
+When `fail_count >= 3`, the issue is skipped by that fixer and **escalated to the next CLI** automatically. If all fixers max out, the issue needs manual attention. Watchdog resets all counts when >80% are maxed out.
 
 ---
 

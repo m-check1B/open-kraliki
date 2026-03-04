@@ -15,6 +15,8 @@ Env vars:
   SKIP_LABELS           — Comma-separated label names to skip (default: "wont-fix,manual,flaky")
 """
 
+import glob
+import hashlib
 import json
 import os
 import sys
@@ -28,7 +30,11 @@ LINEAR_TEAM_ID = os.environ.get("LINEAR_TEAM_ID", "")
 ISSUE_PREFIX = os.environ.get("ISSUE_PREFIX", "[AI-QA]")
 COMMIT_PREFIX = os.environ.get("COMMIT_PREFIX", "")
 FIXER_SLOT = os.environ.get("FIXER_SLOT", "")
-MAX_ISSUES = int(os.environ.get("MAX_ISSUES", "10"))
+try:
+    MAX_ISSUES = int(os.environ.get("MAX_ISSUES", "10"))
+except ValueError:
+    print("WARNING: MAX_ISSUES is not a valid integer, using default 10", file=sys.stderr)
+    MAX_ISSUES = 10
 
 SKIP_LABELS = {
     s.strip().lower()
@@ -147,20 +153,65 @@ def filter_issues(issues: list[dict], state: dict) -> list[dict]:
     return result
 
 
-def split_by_slot(issues: list[dict]) -> list[dict]:
-    """Split issues between fixers based on FIXER_SLOT.
+def _load_all_fixer_states() -> list[dict]:
+    """Load state files from ALL fixers (for escalation across CLIs)."""
+    states = []
+    for path in glob.glob(os.path.expanduser("~/logs/*-fixer/state.json")):
+        try:
+            with open(path) as f:
+                states.append(json.load(f))
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass
+    return states
 
-    Uses FIXER_COUNT env var (set by orchestrator) for dynamic modulo.
-    If only 2 fixers run, issues split 2 ways instead of 4.
+
+def _issue_hash(identifier: str) -> int:
+    """Stable hash for slot assignment (deterministic across runs)."""
+    return int(hashlib.md5(identifier.encode()).hexdigest(), 16)
+
+
+def _get_escalation_level(issue_id: str, all_states: list[dict]) -> int:
+    """Count how many fixers have maxed out (fail_count >= 3) on this issue.
+
+    Each max-out shifts the issue to the next slot in line, so a different
+    CLI gets a chance to fix it.
+    """
+    level = 0
+    for state in all_states:
+        fc = state.get("attempted", {}).get(issue_id, {}).get("fail_count", 0)
+        if fc >= 3:
+            level += 1
+    return level
+
+
+def split_by_slot(issues: list[dict]) -> list[dict]:
+    """Split issues between fixers based on FIXER_SLOT with automatic escalation.
+
+    Each issue hashes to a primary slot. If that slot's fixer maxes out (3 fails),
+    the issue escalates to the next slot so a different CLI gets a chance.
+
+    Example with 4 fixers:
+      PROJ-42 hashes to slot 0 (Claude). Claude fails 3 times.
+      → escalation_level=1 → new slot = (hash+1) % 4 = slot 1 (Codex gets it)
+      Codex fails 3 times → escalation_level=2 → slot 2 (Opencode gets it)
+      All 4 fail → issue is truly stuck (all state files show fail_count >= 3)
     """
     fixer_count = int(os.environ.get("FIXER_COUNT", "4"))
     if FIXER_SLOT.isdigit():
         slot = int(FIXER_SLOT)
-        return [q for idx, q in enumerate(issues) if idx % fixer_count == slot]
+        all_states = _load_all_fixer_states()
+        result = []
+        for q in issues:
+            h = _issue_hash(q["identifier"])
+            escalation = _get_escalation_level(q["identifier"], all_states)
+            assigned_slot = (h + escalation) % fixer_count
+            if assigned_slot == slot:
+                result.append(q)
+        return result
     elif FIXER_SLOT == "even":
-        return [q for idx, q in enumerate(issues) if idx % 2 == 0]
+        return [q for q in issues if _issue_hash(q["identifier"]) % 2 == 0]
     elif FIXER_SLOT == "odd":
-        return [q for idx, q in enumerate(issues) if idx % 2 == 1]
+        return [q for q in issues if _issue_hash(q["identifier"]) % 2 == 1]
     return issues
 
 

@@ -29,6 +29,12 @@ if [ -f "$ENV_FILE" ]; then
 fi
 LOG_RETENTION_DAYS="${LOG_RETENTION_DAYS:-7}"
 
+# ── On/Off switch (exit early if automation is paused) ─────────
+if [ "${AUTOMATION_ENABLED:-true}" = "false" ]; then
+  echo "Automation is paused (AUTOMATION_ENABLED=false). Skipping."
+  exit 0
+fi
+
 mkdir -p "$LOGDIR"
 
 # Rotate logs older than retention period
@@ -51,9 +57,32 @@ fi
 echo $$ > "$LOCKFILE"
 trap 'rm -f "$LOCKFILE"' EXIT
 
+# ── Preflight: git identity (commits fail without this) ────────
+if ! git config user.name &>/dev/null || ! git config user.email &>/dev/null; then
+  echo "ERROR: git user.name or user.email not configured." | tee -a "$LOGFILE"
+  echo "  Run: git config --global user.name 'Your Name'" | tee -a "$LOGFILE"
+  echo "  Run: git config --global user.email 'you@example.com'" | tee -a "$LOGFILE"
+  exit 1
+fi
+
 # ── Fixer definitions ───────────────────────────────────────────
-FIXERS=("claude" "codex" "opencode" "kimi")
+ALL_FIXERS=("claude" "codex" "opencode" "kimi")
+FIXERS=()
 FIXER_EXITS=()
+
+# Auto-detect which CLIs are installed; skip missing ones
+for cli in "${ALL_FIXERS[@]}"; do
+  if command -v "$cli" &>/dev/null; then
+    FIXERS+=("$cli")
+  else
+    echo "Skipping ${cli} fixer (CLI not installed)" | tee -a "$LOGFILE"
+  fi
+done
+
+if [ "${#FIXERS[@]}" -eq 0 ]; then
+  echo "ERROR: No AI coding CLIs found. Install at least one (claude, codex, opencode, kimi)." | tee -a "$LOGFILE"
+  exit 1
+fi
 
 # Export fixer count so precheck.py can use dynamic modulo
 export FIXER_COUNT="${#FIXERS[@]}"
@@ -66,7 +95,11 @@ for i in "${!FIXERS[@]}"; do
   fixer_script="${AUTOMATION_DIR}/fixers/${fixer}-fixer.sh"
   fixer_log="${LOGDIR}/${fixer}-$(date +%Y%m%d-%H%M).log"
 
-  echo ">>> [$((i+1))/${#FIXERS[@]}] ${fixer^} Fixer (slot ${i}) <<<" | tee -a "$LOGFILE"
+  fixer_label="$(echo "$fixer" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+  echo ">>> [$((i+1))/${#FIXERS[@]}] ${fixer_label} Fixer (slot ${i}) <<<" | tee -a "$LOGFILE"
+
+  # Override fixer slot to match dynamic index (not hardcoded slot in script)
+  export FIXER_SLOT="$i"
 
   exit_code=0
   if [ -f "$fixer_script" ]; then
@@ -76,10 +109,10 @@ for i in "${!FIXERS[@]}"; do
   fi
 
   FIXER_EXITS+=("$exit_code")
-  echo "${fixer^} Fixer finished (exit ${exit_code})" | tee -a "$LOGFILE"
+  echo "${fixer_label} Fixer finished (exit ${exit_code})" | tee -a "$LOGFILE"
 
   # Merge fixer log into orchestrator log
-  echo "--- ${fixer^} Fixer output ---" >> "$LOGFILE"
+  echo "--- ${fixer_label} Fixer output ---" >> "$LOGFILE"
   cat "$fixer_log" >> "$LOGFILE" 2>/dev/null || true
   echo "" >> "$LOGFILE"
   rm -f "$fixer_log"

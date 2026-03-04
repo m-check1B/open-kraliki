@@ -42,6 +42,12 @@ fi
 export PATH="/opt/homebrew/bin:${PATH}"
 LOG_RETENTION_DAYS="${LOG_RETENTION_DAYS:-7}"
 
+# ── On/Off switch (exit early if automation is paused) ─────────
+if [ "${AUTOMATION_ENABLED:-true}" = "false" ]; then
+  echo "Automation is paused (AUTOMATION_ENABLED=false). Skipping."
+  exit 0
+fi
+
 # Rotate logs older than retention period
 find "$LOGDIR" -name 'watchdog-*.log' -mtime +${LOG_RETENTION_DAYS} -delete 2>/dev/null || true
 
@@ -134,7 +140,11 @@ echo "--- Check 3: CLI auth ---" | tee -a "$LOGFILE"
 
 AUTH_OK=true
 TODAY=$(date +%Y%m%d)
-RECENT_AUTH_ERR=$(grep -rl "Not logged in" "${HOME}/logs/fixer-orchestrator/orchestrator-${TODAY}"*.log "${HOME}/logs/"*-fixer/fixer-"${TODAY}"*.log 2>/dev/null | wc -l | tr -d ' ' || echo "0")
+RECENT_AUTH_ERR=0
+AUTH_FILES=$(grep -rl "Not logged in" "${HOME}/logs/fixer-orchestrator/orchestrator-${TODAY}"*.log "${HOME}/logs/"*-fixer/fixer-"${TODAY}"*.log 2>/dev/null || true)
+if [ -n "$AUTH_FILES" ]; then
+  RECENT_AUTH_ERR=$(echo "$AUTH_FILES" | wc -l | tr -d ' ')
+fi
 
 if [ "$RECENT_AUTH_ERR" -gt 0 ]; then
   echo "CLI: AUTH ERROR detected in recent logs" | tee -a "$LOGFILE"
@@ -158,7 +168,18 @@ RELAY_OK=true
 RELAY_PID=$(launchctl list 2>/dev/null | grep "$RELAY_AGENT" | awk '{print $1}' || echo "")
 
 if [ "$RELAY_PID" = "-" ] || [ -z "$RELAY_PID" ]; then
-  echo "Relay: NOT RUNNING" | tee -a "$LOGFILE"
+  echo "Relay: NOT RUNNING — attempting restart..." | tee -a "$LOGFILE"
+  launchctl unload "${HOME}/Library/LaunchAgents/${RELAY_AGENT}.plist" 2>/dev/null || true
+  sleep 2
+  launchctl load "${HOME}/Library/LaunchAgents/${RELAY_AGENT}.plist" 2>/dev/null || true
+  # Verify restart worked
+  sleep 3
+  NEW_PID=$(launchctl list 2>/dev/null | grep "$RELAY_AGENT" | awk '{print $1}' || echo "")
+  if [ -n "$NEW_PID" ] && [ "$NEW_PID" != "-" ]; then
+    echo "  Relay restarted successfully (PID ${NEW_PID})" | tee -a "$LOGFILE"
+  else
+    echo "  Relay restart FAILED" | tee -a "$LOGFILE"
+  fi
   RELAY_OK=false
 else
   # Check for recent 409s in relay logs
@@ -212,6 +233,11 @@ print(f'{maxed}/{total}')
 
     MAXED_COUNT=$(echo "$MAXED" | cut -d/ -f1)
     TOTAL_COUNT=$(echo "$MAXED" | cut -d/ -f2)
+
+    # Skip if state parse failed (non-numeric values)
+    case "$MAXED_COUNT$TOTAL_COUNT" in
+      *[!0-9]*) echo "  Skipping ${FIXER_NAME}: could not parse state." | tee -a "$LOGFILE"; continue ;;
+    esac
 
     # If >80% of tracked issues are maxed, reset them all
     if [ "$TOTAL_COUNT" -gt 0 ] && [ "$MAXED_COUNT" -gt 0 ]; then

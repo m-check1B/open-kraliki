@@ -26,6 +26,9 @@ def send_message(text: str) -> bool:
         print("ERROR: TELEGRAM_BOT_TOKEN and PA_OWNER_CHAT_ID must be set", file=sys.stderr)
         return False
 
+    # Telegram message limit is 4096 characters
+    text = text[:4096]
+
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
@@ -45,9 +48,25 @@ def send_message(text: str) -> bool:
             if result.get("ok"):
                 return True
             print(f"Telegram API error: {result}", file=sys.stderr)
+    except URLError as e:
+        print(f"Telegram send failed (Markdown): {e}", file=sys.stderr)
+
+    # Retry without Markdown in case of parse errors
+    try:
+        payload.pop("parse_mode", None)
+        req = Request(
+            url,
+            data=json.dumps(payload).encode(),
+            headers={"Content-Type": "application/json"},
+        )
+        with urlopen(req, timeout=15) as resp:
+            result = json.loads(resp.read())
+            if result.get("ok"):
+                return True
+            print(f"Telegram API error (plain): {result}", file=sys.stderr)
             return False
     except URLError as e:
-        print(f"Telegram send failed: {e}", file=sys.stderr)
+        print(f"Telegram send failed (plain): {e}", file=sys.stderr)
         return False
 
 
