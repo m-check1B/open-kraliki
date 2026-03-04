@@ -19,9 +19,9 @@ LOCKFILE="${LOGDIR}/watchdog.lock"
 TIMESTAMP="$(date +%Y-%m-%dT%H:%M:%SZ)"
 LOGFILE="${LOGDIR}/watchdog-$(date +%Y%m%d-%H%M).log"
 LOG_RETENTION_DAYS=7
-ENV_FILE="${ENV_FILE:-${HOME}/.env}"
+ENV_FILE="${ENV_FILE:-$(cd "$AUTOMATION_DIR/.." && pwd)/.env}"
 RECOVERY_CLI="${RECOVERY_CLI:-opencode}"
-SEND_TELEGRAM="${AUTOMATION_DIR}/../scripts/send-telegram.py"
+SEND_TELEGRAM="${AUTOMATION_DIR}/send-telegram.py"
 COMMIT_FRESHNESS_HOURS="${COMMIT_FRESHNESS_HOURS:-2}"
 
 # LaunchAgent identifiers (override via env if needed)
@@ -348,7 +348,8 @@ ${RECOVERY_STEPS}
 Execute the recovery steps above. Verify each fix worked. Do NOT create new files. Only fix existing processes. Be surgical and fast."
 
 cd "${PROJECT_DIR}"
-RECOVERY_OUTPUT=$(echo "$RECOVERY_PROMPT" | timeout 300 "$RECOVERY_CLI" run 2>&1) || true
+# macOS-safe timeout using perl alarm (no GNU coreutils needed)
+RECOVERY_OUTPUT=$(echo "$RECOVERY_PROMPT" | perl -e 'alarm 300; exec @ARGV' "$RECOVERY_CLI" run 2>&1) || true
 echo "$RECOVERY_OUTPUT" | tail -50 | tee -a "$LOGFILE"
 
 # ── Send Telegram alert ──────────────────────────────────────────

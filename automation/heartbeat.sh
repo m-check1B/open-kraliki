@@ -16,12 +16,12 @@ LOGDIR="${HOME}/logs/heartbeat"
 TIMESTAMP="$(date +%Y-%m-%dT%H:%M:%SZ)"
 LOGFILE="${LOGDIR}/heartbeat-$(date +%Y%m%d-%H%M).log"
 LOG_RETENTION_DAYS=7
-ENV_FILE="${ENV_FILE:-${HOME}/.env}"
+ENV_FILE="${ENV_FILE:-$(cd "$AUTOMATION_DIR/.." && pwd)/.env}"
 HEARTBEAT_CLI="${HEARTBEAT_CLI:-claude}"
 PRECHECK_SCRIPT="${AUTOMATION_DIR}/heartbeat-precheck.py"
 PROMPT_FILE="${AUTOMATION_DIR}/../prompts/heartbeat.md"
 PERSONALITY_DIR="${AUTOMATION_DIR}/../personality"
-SEND_TELEGRAM="${AUTOMATION_DIR}/../scripts/send-telegram.py"
+SEND_TELEGRAM="${AUTOMATION_DIR}/send-telegram.py"
 
 mkdir -p "$LOGDIR"
 

@@ -32,28 +32,22 @@ from urllib.request import Request, urlopen
 
 # ── Bootstrap env vars (launchd does not inherit shell env) ───────────
 def _load_env():
-    """Source env vars from dotfiles when running under launchd."""
-    home = os.path.expanduser("~")
-    token_file = os.path.join(home, ".telegram_token")
-    if os.path.exists(token_file):
-        with open(token_file) as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("export ") and "=" in line:
-                    kv = line[len("export "):]
-                    key, _, val = kv.partition("=")
-                    os.environ.setdefault(key.strip(), val.strip().strip("'\""))
-    zshrc = os.path.join(home, ".zshrc")
-    if os.path.exists(zshrc):
-        with open(zshrc) as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("export ") and "=" in line:
-                    kv = line[len("export "):]
-                    key, _, val = kv.partition("=")
-                    key = key.strip()
-                    if key in ("LINEAR_API_KEY", "PA_OWNER_CHAT_ID", "GROQ_API_KEY"):
-                        os.environ.setdefault(key, val.strip().strip("'\""))
+    """Source env vars from the repo .env file when running under launchd."""
+    # Primary: repo-level .env (same directory as project root)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    env_file = os.environ.get("ENV_FILE", os.path.join(project_root, ".env"))
+
+    for path in [env_file, os.path.join(os.path.expanduser("~"), ".env")]:
+        if os.path.exists(path):
+            with open(path) as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("export ") and "=" in line:
+                        kv = line[len("export "):]
+                        key, _, val = kv.partition("=")
+                        os.environ.setdefault(key.strip(), val.strip().strip("'\""))
+            break
 
 
 _load_env()

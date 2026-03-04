@@ -432,7 +432,7 @@ Everything this system uses, with install links.
 | 0 | **Claude Code** | `npm install -g @anthropic-ai/claude-code` ([docs](https://docs.anthropic.com/en/docs/claude-code)) | `ANTHROPIC_API_KEY` ([get key](https://console.anthropic.com/)) |
 | 1 | **Codex CLI** | `npm install -g @openai/codex` ([repo](https://github.com/openai/codex)) | `OPENAI_API_KEY` ([get key](https://platform.openai.com/api-keys)) |
 | 2 | **Opencode CLI** | `curl -fsSL https://opencode.ai/install | bash` ([repo](https://github.com/opencode-ai/opencode)) | Depends on configured provider |
-| 3 | **Gemini CLI** | `npm install -g @anthropic-ai/claude-code && npx @anthropic-ai/claude-code` or `npm install -g @google/gemini-cli` ([repo](https://github.com/google-gemini/gemini-cli)) | `GEMINI_API_KEY` ([get key](https://aistudio.google.com/apikey)) |
+| 3 | **Gemini CLI** | `npm install -g @google/gemini-cli` ([repo](https://github.com/google-gemini/gemini-cli)) | `GEMINI_API_KEY` ([get key](https://aistudio.google.com/apikey)) |
 
 > **You only need 1 CLI** to get started. Claude Code (slot 0) is recommended as the primary fixer. Add others to run more fixers in parallel.
 

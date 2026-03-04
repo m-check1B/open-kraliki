@@ -10,7 +10,17 @@ set -euo pipefail
 
 # === CONFIGURATION ===
 AUTOMATION_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PROJECT_DIR="${PROJECT_DIR:?ERROR: PROJECT_DIR must be set}"
+ENV_FILE="${ENV_FILE:-$(cd "$AUTOMATION_DIR/.." && pwd)/.env}"
+
+# ── Source env vars first (launchd/cron doesn't inherit shell env) ─────
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+fi
+
+PROJECT_DIR="${PROJECT_DIR:?ERROR: PROJECT_DIR must be set. Check your .env file.}"
 PROJECT_BRANCH="${PROJECT_BRANCH:-main}"
 LOGDIR="$HOME/logs/claude-fixer"
 FIXER_NAME="Claude Fixer"
@@ -21,7 +31,6 @@ ACTIVE_START="${ACTIVE_START:-0}"
 ACTIVE_END="${ACTIVE_END:-24}"
 ISSUE_PREFIX="${ISSUE_PREFIX:-[AI-QA]}"
 COMMIT_PREFIX="${COMMIT_PREFIX:-[AI-FIX]}"
-ENV_FILE="${ENV_FILE:-$HOME/.env}"
 # === END CONFIGURATION ===
 
 LOCKFILE="${LOGDIR}/claude-fixer.lock"
@@ -31,14 +40,6 @@ LOGFILE="${LOGDIR}/fixer-$(date +%Y%m%d-%H%M).log"
 
 # Ensure log dir exists
 mkdir -p "$LOGDIR"
-
-# ── Source env vars (launchd/cron doesn't inherit shell env) ─────
-if [ -f "$ENV_FILE" ]; then
-  set -a
-  # shellcheck disable=SC1090
-  source "$ENV_FILE"
-  set +a
-fi
 
 # Rotate logs older than 7 days
 find "$LOGDIR" -name 'fixer-*.log' -mtime +7 -delete 2>/dev/null || true
@@ -113,7 +114,7 @@ if [ "$ISSUE_COUNT" -eq 0 ]; then
 fi
 
 # ── Prepare prompt template ──────────────────────────────────────
-PROMPT_TEMPLATE=$(cat "${AUTOMATION_DIR}/../prompts/qa-fixer.md")
+PROMPT_TEMPLATE=$(cat "${AUTOMATION_DIR}/../prompts/fixer.md")
 SYSTEM_CONTEXT="$(cat "${AUTOMATION_DIR}/../personality/SOUL.md" 2>/dev/null || echo '')"
 
 # ── Load project CLAUDE.md for context ───────────────────────────

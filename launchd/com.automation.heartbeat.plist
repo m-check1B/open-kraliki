@@ -7,7 +7,7 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/bin/bash</string>
-		<string>__AUTOMATION_DIR__/automation/heartbeat.sh</string>
+		<string>__AUTOMATION_DIR__/heartbeat.sh</string>
 	</array>
 	<key>StartInterval</key>
 	<integer>1800</integer>

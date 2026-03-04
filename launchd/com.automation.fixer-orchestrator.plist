@@ -7,7 +7,7 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/bin/bash</string>
-		<string>__AUTOMATION_DIR__/automation/fixer-orchestrator.sh</string>
+		<string>__AUTOMATION_DIR__/fixer-orchestrator.sh</string>
 	</array>
 	<key>StartInterval</key>
 	<integer>900</integer>

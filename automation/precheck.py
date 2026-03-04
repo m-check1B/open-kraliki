@@ -38,7 +38,7 @@ SKIP_LABELS = {
 
 STATE_FILE = os.environ.get(
     "QA_FIXER_STATE_FILE",
-    os.path.expanduser("~/logs/qa-fixer/state.json"),
+    os.path.expanduser("~/logs/claude-fixer/state.json"),
 )
 
 

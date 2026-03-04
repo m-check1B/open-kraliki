@@ -7,7 +7,7 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/bin/bash</string>
-		<string>__AUTOMATION_DIR__/automation/watchdog.sh</string>
+		<string>__AUTOMATION_DIR__/watchdog.sh</string>
 	</array>
 	<key>StartInterval</key>
 	<integer>3600</integer>

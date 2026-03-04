@@ -7,7 +7,7 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/opt/homebrew/bin/python3</string>
-		<string>__AUTOMATION_DIR__/automation/telegram-relay.py</string>
+		<string>__AUTOMATION_DIR__/telegram-relay.py</string>
 	</array>
 	<key>KeepAlive</key>
 	<true/>

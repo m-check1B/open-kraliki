@@ -14,7 +14,7 @@ Step-by-step installation checklist for Kraliki OS automation.
 ### 1. Clone This Repository
 
 ```bash
-git clone https://github.com/user/open-kraliki.git ~/github/open-kraliki
+git clone https://github.com/m-check1B/open-kraliki.git ~/github/open-kraliki
 cd ~/github/open-kraliki
 ```
 

@@ -39,7 +39,7 @@ Templates for defining your AI assistant's identity, values, and communication s
 
 ```bash
 # 1. Clone
-git clone https://github.com/user/open-kraliki.git
+git clone https://github.com/m-check1B/open-kraliki.git
 cd open-kraliki
 
 # 2. Configure
