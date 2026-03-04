@@ -322,6 +322,8 @@ def call_cli(prompt: str, system_context: str) -> str:
         cmd += ["--quiet"]
     elif "opencode" in cli_name:
         cmd += ["run", "--agent", "build"]
+    elif "kimi" in cli_name:
+        cmd += ["--yes"]
 
     try:
         result = subprocess.run(

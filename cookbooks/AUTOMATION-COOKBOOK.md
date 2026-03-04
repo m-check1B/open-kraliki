@@ -23,6 +23,10 @@ Complete reference for all automated agents, their schedules, configs, and opera
 │  │  │ Claude     │ │ Codex      │ │ Opencode   │ │      │
 │  │  │ Slot 0     │ │ Slot 1     │ │ Slot 2     │ │      │
 │  │  └────────────┘ └────────────┘ └────────────┘ │      │
+│  │  ┌────────────┐                                │      │
+│  │  │ Kimi       │                                │      │
+│  │  │ Slot 3     │                                │      │
+│  │  └────────────┘                                │      │
 │  └───────────────────────────────────────────────┘      │
 │                                                         │
 │  ┌──────────────────┐                                   │
@@ -98,9 +102,10 @@ Issues are split by index modulo 4 to prevent conflicts:
 
 | Slot | Fixer | Issues |
 |------|-------|--------|
-| 0 | Claude | #0, #3, #6, #9... |
-| 1 | Codex | #1, #4, #7, #10... |
-| 2 | Opencode | #2, #5, #8, #11... |
+| 0 | Claude | #0, #4, #8, #12... |
+| 1 | Codex | #1, #5, #9, #13... |
+| 2 | Opencode | #2, #6, #10, #14... |
+| 3 | Kimi | #3, #7, #11, #15... |
 
 ### Fixer Flow (each slot)
 
@@ -129,6 +134,7 @@ bash automation/fixer-orchestrator.sh
 tail -f ~/logs/claude-fixer/fixer-*.log
 tail -f ~/logs/codex-fixer/fixer-*.log
 tail -f ~/logs/opencode-fixer/fixer-*.log
+tail -f ~/logs/kimi-fixer/fixer-*.log
 
 # Check lock files
 ls -la ~/logs/fixer-orchestrator/orchestrator.lock
@@ -237,6 +243,7 @@ All configuration is via environment variables. See `env.example` for the full l
 | Claude Fixer | `~/logs/claude-fixer/` |
 | Codex Fixer | `~/logs/codex-fixer/` |
 | Opencode Fixer | `~/logs/opencode-fixer/` |
+| Kimi Fixer | `~/logs/kimi-fixer/` |
 | Watchdog | `~/logs/watchdog/` |
 | Heartbeat | `~/logs/heartbeat/` |
 | Relay | `~/logs/relay/` |
@@ -251,6 +258,7 @@ All logs rotate automatically (7-day retention).
 | `~/logs/claude-fixer/state.json` | Claude fixer attempt tracking |
 | `~/logs/codex-fixer/state.json` | Codex fixer attempt tracking |
 | `~/logs/opencode-fixer/state.json` | Opencode fixer attempt tracking |
+| `~/logs/kimi-fixer/state.json` | Kimi fixer attempt tracking |
 
 State file format:
 ```json

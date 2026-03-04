@@ -61,7 +61,7 @@ See [SETUP.md](./SETUP.md) for the full installation guide.
 - **macOS** with launchd
 - **Python 3.10+**
 - **Git** with SSH access to your repo
-- At least one AI coding CLI: `claude`, `codex`, or `opencode`
+- At least one AI coding CLI: `claude`, `codex`, `opencode`, or `kimi`
 - **Linear** account with API key
 - **Telegram** bot (via @BotFather)
 

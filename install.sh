@@ -66,6 +66,7 @@ LOG_DIRS=(
   "$HOME/logs/claude-fixer"
   "$HOME/logs/codex-fixer"
   "$HOME/logs/opencode-fixer"
+  "$HOME/logs/kimi-fixer"
   "$HOME/logs/watchdog"
   "$HOME/logs/heartbeat"
   "$HOME/logs/relay"
