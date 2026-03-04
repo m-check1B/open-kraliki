@@ -244,11 +244,123 @@ export ACTIVE_START=8   # Start at 8am
 export ACTIVE_END=22    # Stop at 10pm
 ```
 
-### Chat with your assistant
+---
 
-The Telegram relay is running. Send a message to your bot — it will respond using Claude with access to your project files.
+## Phase 7b: Telegram Bot — Your AI Assistant (10 min)
 
-Send a voice message (requires Groq API key) and it'll transcribe and respond.
+The fixer pipeline sends you notifications. But the Telegram relay is much more than that — it's a **full AI assistant** you can chat with from your phone. It has access to your project files, can run commands, and manages Linear issues for you.
+
+### What the bot can do
+
+```
+You (Telegram)                        Bot
+─────────────────────────────────────────────
+"What's the status of PROJ-42?"  →  Checks Linear, replies with details
+"Fix the typo in config.ts"     →  Reads the file, edits it, commits
+"List open P0 issues"            →  Queries Linear, sends summary
+🎤 (voice message)               →  Transcribes via Groq → processes as text
+"Summarize today's commits"      →  Runs git log, sends digest
+```
+
+### How it works
+
+```
+┌──────────┐    getUpdates     ┌──────────────┐    claude --print    ┌───────┐
+│ Telegram │ ◄──────────────── │ telegram-     │ ──────────────────► │ Claude│
+│ (you)    │ ──────────────── ►│ relay.py      │ ◄────────────────── │ CLI   │
+│          │    sendMessage     │ (always-on)   │    response          │       │
+└──────────┘                   └──────────────┘                      └───────┘
+                                      │
+                                      ├── personality/SOUL.md (personality)
+                                      ├── personality/IDENTITY.md (capabilities)
+                                      ├── personality/USER.md (your preferences)
+                                      ├── prompts/relay.md (system prompt)
+                                      └── ~/logs/relay/conversations/ (chat history)
+```
+
+The relay long-polls Telegram for your messages, pipes them through Claude with your personality files as context, and sends the response back. It keeps a daily conversation log so the bot remembers what you talked about earlier today.
+
+### Test it
+
+- [ ] Check the relay is running:
+
+```bash
+launchctl list | grep com.automation.telegram-relay
+# Should show a PID (not "-")
+```
+
+- [ ] Send a text message to your bot in Telegram
+- [ ] You should see a "typing..." indicator, then a response within 10-30 seconds
+- [ ] Check the conversation log:
+
+```bash
+cat ~/logs/relay/conversations/$(date +%Y-%m-%d).jsonl
+```
+
+### Test voice messages (optional)
+
+If you set `GROQ_API_KEY` in your `.env`:
+
+- [ ] Send a voice message to the bot in Telegram
+- [ ] The bot transcribes it via Groq Whisper and processes it as text
+- [ ] You get a text response back
+
+> **Language:** Voice transcription defaults to English. To change it, set `WHISPER_LANGUAGE` in your `.env` (e.g., `cs` for Czech, `de` for German, `es` for Spanish).
+
+### Customize the personality
+
+The bot's personality is defined in `personality/`:
+
+- [ ] Edit **`personality/IDENTITY.md`** — give your bot a name and define its role
+- [ ] Edit **`personality/SOUL.md`** — set the communication style and tone
+- [ ] Edit **`personality/USER.md`** — add your name, timezone, and preferences
+
+The relay loads these files as system context for every message. Changes take effect on the next message (no restart needed).
+
+### Customize the behavior
+
+Edit **`prompts/relay.md`** to change how the bot handles messages. By default it:
+- Responds concisely (it's Telegram, not an essay)
+- Can use tools (read files, search code, check Linear)
+- Can delegate to other CLIs for specialized tasks
+- Keeps responses under 2000 characters
+
+### Troubleshooting the relay
+
+```bash
+# Check if relay is running
+launchctl list | grep com.automation.telegram-relay
+
+# Check relay logs
+tail -50 ~/logs/relay/launchd_stdout.log
+
+# Common issues:
+# "409 Conflict" → another bot instance is polling the same token. Kill it.
+# No response → check Claude CLI auth: claude --version
+# Slow responses → normal for complex questions (up to 120s timeout)
+
+# Restart the relay
+launchctl unload ~/Library/LaunchAgents/com.automation.telegram-relay.plist
+launchctl load ~/Library/LaunchAgents/com.automation.telegram-relay.plist
+```
+
+### The heartbeat bot
+
+Separately from the relay, the **heartbeat** sends you periodic briefings (every 30 min during active hours). It checks:
+
+- **Linear**: open issues assigned to you + unassigned urgent issues
+- **Calendar**: upcoming events today (requires `icalBuddy`: `brew install ical-buddy`)
+- **Telegram**: unread messages from you that the relay might have missed
+
+If nothing noteworthy is found, it stays silent (costs $0). Only messages you when there's something worth knowing.
+
+```bash
+# Test heartbeat manually
+bash automation/heartbeat.sh
+
+# Check heartbeat logs
+tail -20 ~/logs/heartbeat/heartbeat-*.log
+```
 
 ---
 
