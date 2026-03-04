@@ -1,0 +1,32 @@
+# Environment
+.env
+*.env.local
+
+# Logs
+logs/
+*.log
+
+# State files
+state.json
+
+# Lock files
+*.lock
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
+._*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temp files
+*.tmp
+*.bak
