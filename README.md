@@ -164,10 +164,15 @@ Runs 6 health checks every hour:
 
 ```
 open-kraliki/
+├── README.md                        # Project overview (this file)
+├── CLAUDE.md                        # Claude Code project instructions
 ├── START-HERE.md                    # Beginner-friendly setup guide
 ├── SETUP.md                         # Technical installation reference
+├── CLI-SETUP.md                     # Per-CLI installation instructions
+├── agents.md                        # Agent slots, escalation logic, CLI config
 ├── env.example                      # All configuration variables
 ├── install.sh                       # One-shot installer
+├── LICENSE                          # Project license
 │
 ├── automation/
 │   ├── fixer-orchestrator.sh        # Master orchestrator
