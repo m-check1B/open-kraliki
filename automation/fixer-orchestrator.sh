@@ -10,7 +10,7 @@
 # Schedule: Every 15 minutes
 # Slots: Claude (0), Codex (1), Opencode (2), Kimi (3)
 
-set -euo pipefail
+set -eo pipefail
 
 # ── Configuration ────────────────────────────────────────────────
 AUTOMATION_DIR="$(cd "$(dirname "$0")" && pwd)"

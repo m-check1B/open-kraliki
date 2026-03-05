@@ -6,7 +6,7 @@
 #
 # Slot: 1
 
-set -euo pipefail
+set -eo pipefail
 
 # === CONFIGURATION ===
 AUTOMATION_DIR="$(cd "$(dirname "$0")/.." && pwd)"

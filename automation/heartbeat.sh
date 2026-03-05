@@ -8,7 +8,7 @@
 # LaunchAgent: com.automation.heartbeat
 # Schedule: Every 30 minutes
 
-set -euo pipefail
+set -eo pipefail
 
 # ── Configuration ────────────────────────────────────────────────
 AUTOMATION_DIR="$(cd "$(dirname "$0")" && pwd)"
