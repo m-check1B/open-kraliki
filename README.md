@@ -33,46 +33,48 @@ Every 60 min    Watchdog health check → auto-kill stuck processes → reset st
 Always-on       Telegram relay → chat with AI about your code → voice messages
 ```
 
-### The Full Stack
+### Components
 
-| Component | What It Does | Script |
-|-----------|-------------|--------|
-| **Fixer Orchestrator** | Runs all installed fixers sequentially every 15 min | `automation/fixer-orchestrator.sh` |
-| **Claude/Codex/Opencode/Kimi Fixers** | Each picks up Linear issues assigned to its slot, fixes code, commits | `automation/fixers/*-fixer.sh` |
-| **Precheck** | Queries Linear for fixable issues, assigns to slots via stable hash, handles escalation | `automation/precheck.py` |
-| **Telegram Relay** | Always-on chatbot — text + voice, personality files, conversation history | `automation/telegram-relay.py` |
-| **Heartbeat** | Periodic status briefing — only messages when something's noteworthy | `automation/heartbeat.sh` |
-| **Watchdog** | Health monitor — kills stuck processes, resets state, restarts relay | `automation/watchdog.sh` |
-| **Linear Tool** | CLI for Linear API — list, create, update, comment on issues | `automation/linear-tool.py` |
+| Component | Script | What It Does |
+|-----------|--------|-------------|
+| **Fixer Orchestrator** | `automation/fixer-orchestrator.sh` | Master loop — auto-detects installed CLIs, runs fixers sequentially, manages slots |
+| **Fixers (x4)** | `automation/fixers/*-fixer.sh` | Per-CLI scripts: git sync → precheck → AI fix → validate → commit → push → update Linear |
+| **Precheck** | `automation/precheck.py` | Queries Linear for fixable issues, assigns to slots via `md5(issue_id) % fixer_count`, handles escalation |
+| **Heartbeat** | `automation/heartbeat.sh` | Periodic status orchestrator — runs precheck, calls AI to compose briefing, sends to Telegram |
+| **Heartbeat Precheck** | `automation/heartbeat-precheck.py` | Cheap check (no LLM cost): Linear issues + macOS Calendar + relay process status |
+| **Watchdog** | `automation/watchdog.sh` | 6 health checks: commit freshness, stuck processes, CLI auth, relay status, state health, remote SSH |
+| **Telegram Relay** | `automation/telegram-relay.py` | Always-on chatbot — text + voice, personality context, conversation history, CLI routing |
+| **Send Telegram** | `automation/send-telegram.py` | Simple message sender — used by all other scripts to notify via Telegram |
+| **Linear Tool** | `automation/linear-tool.py` | CLI for Linear API: `list`, `get`, `create`, `update`, `comment`, `search` |
 
 ---
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                        launchd (macOS)                            │
-│                                                                  │
-│  ┌──────────────────────┐  ┌────────────┐  ┌─────────────────┐  │
-│  │  Fixer Orchestrator  │  │  Watchdog  │  │    Heartbeat    │  │
-│  │  (every 15 min)      │  │  (hourly)  │  │  (every 30 min) │  │
-│  └──────────┬───────────┘  └────────────┘  └─────────────────┘  │
-│             │                                                    │
-│  ┌──────────┴────────────────────────────────────┐               │
-│  │  Fixers run SEQUENTIALLY (shared git worktree) │               │
-│  │                                                │               │
-│  │  Claude (slot 0)  →  Codex (slot 1)           │               │
-│  │  Opencode (slot 2) →  Kimi (slot 3)           │               │
-│  │                                                │               │
-│  │  Issue fails 3x? → Escalates to next CLI      │               │
-│  │  CLI not installed? → Auto-skipped             │               │
-│  └────────────────────────────────────────────────┘               │
-│                                                                  │
-│  ┌──────────────────────────────────────────┐                    │
-│  │  Telegram Relay (always-on long-polling)  │                    │
-│  │  Text + Voice → AI CLI → Reply            │                    │
-│  └──────────────────────────────────────────┘                    │
-└──────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        launchd (macOS)                          │
+│                                                                 │
+│  ┌──────────────────────┐ ┌────────────┐ ┌──────────────────┐  │
+│  │  Fixer Orchestrator  │ │  Watchdog  │ │    Heartbeat     │  │
+│  │  (every 15 min)      │ │  (hourly)  │ │  (every 30 min)  │  │
+│  └──────────┬───────────┘ └────────────┘ └──────────────────┘  │
+│             │                                                   │
+│  ┌──────────┴────────────────────────────────────┐              │
+│  │  Fixers run SEQUENTIALLY (shared git worktree) │              │
+│  │                                                │              │
+│  │  Claude (slot 0)  →  Codex (slot 1)           │              │
+│  │  Opencode (slot 2) →  Kimi (slot 3)           │              │
+│  │                                                │              │
+│  │  Issue fails 3x? → Escalates to next CLI      │              │
+│  │  CLI not installed? → Auto-skipped             │              │
+│  └────────────────────────────────────────────────┘              │
+│                                                                 │
+│  ┌──────────────────────────────────────────┐                   │
+│  │  Telegram Relay (always-on long-polling)  │                   │
+│  │  Text + Voice → AI CLI → Reply            │                   │
+│  └──────────────────────────────────────────┘                   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 **How issue assignment works:** Each issue gets a deterministic slot via `md5(issue_id) % fixer_count`. If that fixer fails 3 times, the issue escalates to the next CLI: `(hash + escalation_level) % fixer_count`. If all CLIs fail, the issue needs manual attention.
@@ -120,7 +122,7 @@ Opencode fails 3x           →  Kimi gets it
 All 4 fail                  →  Issue needs manual fix
 ```
 
-Each CLI has different strengths. An issue one can't solve, another might crack.
+Each CLI has different strengths. An issue one can't solve, another might crack. See [agents.md](./agents.md) for the full escalation logic and slot assignment details.
 
 ### On/Off Switch
 
@@ -154,7 +156,7 @@ Runs 6 health checks every hour:
 | Commit freshness | Are commits landing? Alerts if nothing in 2 hours |
 | Stuck processes | Orchestrator running >120 min? Kill it |
 | CLI auth | "Not logged in" errors in fixer logs? Alert |
-| Relay status | Relay crashed? Auto-restart it |
+| Relay status | Relay crashed or 409 conflict? Auto-restart |
 | State health | >80% of issues maxed out on failures? Reset all counts |
 | Remote server | (Optional) SSH health check on production |
 
@@ -172,45 +174,84 @@ open-kraliki/
 ├── agents.md                        # Agent slots, escalation logic, CLI config
 ├── env.example                      # All configuration variables
 ├── install.sh                       # One-shot installer
-├── LICENSE                          # Project license
+├── LICENSE                          # MIT license
 │
 ├── automation/
-│   ├── fixer-orchestrator.sh        # Master orchestrator
-│   ├── fixers/                      # Individual fixer scripts (4 CLIs)
+│   ├── fixer-orchestrator.sh        # Master orchestrator (sequential, auto-detect CLIs)
 │   ├── precheck.py                  # Linear query + slot assignment + escalation
-│   ├── telegram-relay.py            # Always-on Telegram chatbot
-│   ├── heartbeat.sh                 # Periodic status briefing
-│   ├── heartbeat-precheck.py        # Calendar + Linear check (no LLM cost)
-│   ├── watchdog.sh                  # Health monitor + auto-recovery
-│   ├── send-telegram.py             # Simple message sender
-│   └── linear-tool.py              # Linear API CLI
+│   ├── telegram-relay.py            # Always-on Telegram chatbot (text + voice)
+│   ├── heartbeat.sh                 # Periodic status briefing orchestrator
+│   ├── heartbeat-precheck.py        # Calendar + Linear + relay check (no LLM cost)
+│   ├── watchdog.sh                  # Health monitor + auto-recovery (6 checks)
+│   ├── send-telegram.py             # Simple Telegram message sender
+│   ├── linear-tool.py              # Linear API CLI (list/get/create/update/comment/search)
+│   └── fixers/
+│       ├── claude-fixer.sh          # Slot 0 — Claude Code
+│       ├── codex-fixer.sh           # Slot 1 — Codex CLI
+│       ├── opencode-fixer.sh        # Slot 2 — Opencode CLI
+│       └── kimi-fixer.sh           # Slot 3 — Kimi CLI
 │
-├── prompts/                         # System prompts for fixer, relay, heartbeat
-├── personality/                     # AI identity, values, user preferences
-├── launchd/                         # macOS scheduler plist templates
-├── product-roadmap/                 # 9-section product audit methodology
-└── cookbooks/                       # Operations + troubleshooting guides
+├── prompts/
+│   ├── fixer.md                     # System prompt for AI fixers
+│   ├── heartbeat.md                 # System prompt for heartbeat briefings
+│   └── relay.md                     # System prompt for Telegram relay
+│
+├── personality/
+│   ├── IDENTITY.md                  # AI assistant identity and role
+│   ├── SOUL.md                      # Personality traits and communication style
+│   └── USER.md                      # Owner profile and preferences
+│
+├── launchd/                         # macOS plist templates (4 agents)
+│
+├── cookbooks/
+│   ├── AUTOMATION-COOKBOOK.md        # Operations reference (architecture, configs, commands)
+│   └── DOCTOR-COOKBOOK.md           # Troubleshooting + recovery playbooks
+│
+└── product-roadmap/
+    ├── METHODOLOGY.md               # 9-section product audit framework
+    ├── CHECKLIST.md                 # Master audit checklist template
+    ├── VERTICAL-TEMPLATE.md         # Blank module audit template
+    └── examples/
+        └── 01-example-vertical.md  # Worked example (Auth module)
 ```
 
 ---
 
 ## Configuration
 
-All settings live in `.env`. Key variables:
+All settings live in `.env` (copied from `env.example`). Key variables:
 
 | Variable | Purpose | Required |
 |----------|---------|----------|
 | `LINEAR_API_KEY` | Linear API access | Yes |
 | `LINEAR_TEAM_ID` | Your Linear team UUID | Yes |
+| `LINEAR_TEAM_KEY` | Team key prefix (e.g., `PROJ`) | Yes |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token | Yes |
 | `PA_OWNER_CHAT_ID` | Your Telegram chat ID | Yes |
 | `PROJECT_DIR` | Path to dedicated project clone | Yes |
 | `AUTOMATION_ENABLED` | `true`/`false` — master on/off switch | No (default: `true`) |
-| `ACTIVE_START` / `ACTIVE_END` | Active hours (e.g., 8-22) | No (default: 24/7) |
-| `GROQ_API_KEY` | Voice transcription via Groq Whisper | No |
+| `ACTIVE_START` / `ACTIVE_END` | Active hours (e.g., `8` / `22`) | No (default: 24/7) |
 | `ISSUE_PREFIX` | Issue title prefix to match (e.g., `[AI-QA]`) | No |
+| `COMMIT_PREFIX` | Commit message prefix (e.g., `[AI-QA]`) | No |
+| `GROQ_API_KEY` | Voice transcription via Groq Whisper | No |
+| `RELAY_TTS_VOICE` | macOS voice for voice replies | No (default: `Ava (Premium)`) |
 
 See [env.example](./env.example) for the full list with comments.
+
+---
+
+## Documentation
+
+| Doc | What It Covers |
+|-----|---------------|
+| **[START-HERE.md](./START-HERE.md)** | Beginner setup guide — 8 phases, 30 min, no experience needed |
+| **[SETUP.md](./SETUP.md)** | Technical installation checklist for developers |
+| **[CLI-SETUP.md](./CLI-SETUP.md)** | Install + authenticate each AI coding CLI |
+| **[agents.md](./agents.md)** | Agent slots, escalation logic, state tracking, adding/removing CLIs |
+| **[AUTOMATION-COOKBOOK.md](./cookbooks/AUTOMATION-COOKBOOK.md)** | Full operations reference — architecture, schedules, configs, commands |
+| **[DOCTOR-COOKBOOK.md](./cookbooks/DOCTOR-COOKBOOK.md)** | Troubleshooting, diagnostics, 5 recovery playbooks |
+| **[METHODOLOGY.md](./product-roadmap/METHODOLOGY.md)** | Product audit framework (separate from automation) |
+| **[CLAUDE.md](./CLAUDE.md)** | Project instructions for Claude Code sessions |
 
 ---
 
@@ -223,20 +264,9 @@ Included separately from the automation — a framework for auditing any softwar
 - **User Journey Audits** — test what real users do, not what the spec says
 - **Issue Templates** — standardized format for Linear issues with effort sizing
 
+Includes a blank [VERTICAL-TEMPLATE.md](./product-roadmap/VERTICAL-TEMPLATE.md) and a worked [example](./product-roadmap/examples/01-example-vertical.md).
+
 See [product-roadmap/METHODOLOGY.md](./product-roadmap/METHODOLOGY.md).
-
----
-
-## Documentation
-
-| Doc | What It Covers |
-|-----|---------------|
-| **[START-HERE.md](./START-HERE.md)** | Beginner setup guide (30 min, no experience needed) |
-| **[CLI-SETUP.md](./CLI-SETUP.md)** | Install + authenticate each AI coding CLI |
-| **[SETUP.md](./SETUP.md)** | Technical installation reference |
-| **[AUTOMATION-COOKBOOK.md](./cookbooks/AUTOMATION-COOKBOOK.md)** | Architecture, schedules, configs, operations |
-| **[DOCTOR-COOKBOOK.md](./cookbooks/DOCTOR-COOKBOOK.md)** | Troubleshooting, recovery playbooks, diagnostics |
-| **[METHODOLOGY.md](./product-roadmap/METHODOLOGY.md)** | Product audit framework |
 
 ---
 
