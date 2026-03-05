@@ -29,6 +29,15 @@ Open-source automation template: AI agents that pull Linear issues, fix code, pu
 ## File Layout
 
 ```
+CLAUDE.md             — Claude Code project instructions (this file)
+README.md             — Project overview and quick start
+START-HERE.md         — Step-by-step setup guide
+SETUP.md              — Detailed installation and configuration
+CLI-SETUP.md          — Per-CLI installation instructions
+agents.md             — Agent slots, escalation logic, CLI config
+env.example           — Template for .env (all config vars)
+install.sh            — Automated setup script
+LICENSE               — Project license
 automation/           — All scripts (shell + Python)
 automation/fixers/    — Per-CLI fixer scripts
 prompts/              — System prompts for fixer, relay, heartbeat
