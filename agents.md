@@ -109,8 +109,46 @@ The heartbeat (`automation/heartbeat.sh`) runs every 30 minutes:
 
 1. `heartbeat-precheck.py` checks Linear, Calendar, relay status — **no LLM cost**
 2. If nothing noteworthy → exits silently ($0)
-3. If findings → calls CLI to compose a Telegram briefing
+3. If findings → calls the primary CLI, then falls back through the configured chain if the primary is unavailable, rate-limited, or fails
 4. Sends summary (unless CLI says "SKIP")
+
+Default fallback chain:
+
+```
+Claude -> Codex -> Opencode -> Kimi
+```
+
+Configure it with:
+
+```bash
+export HEARTBEAT_CLI="claude"
+export HEARTBEAT_FALLBACKS="codex,opencode,kimi"
+export RELAY_CLI_CMD="claude --print"
+export RELAY_CLI_FALLBACKS="codex,opencode,kimi"
+```
+
+## Turbo Mode
+
+Turbo mode is the high-throughput switch for large backlog waves.
+
+```bash
+export TURBO_MODE=true
+export TURBO_MAX_ISSUES=100
+export TURBO_PRE_WAVE_CMD="bash $HOME/github/open-kraliki/automation/turbo-pre-wave.example.sh"
+export TURBO_PRE_WAVE_MIN_INTERVAL=3600
+```
+
+Use it when:
+- an audit generated 50-100 issues at once
+- you want rapid triage plus batched fixer intake
+- an external CEO / senior-dev orchestration flow is feeding the automation
+
+What it changes:
+- `precheck.py` fetches a larger Linear window
+- each fixer slot can receive much larger batches than the normal default of 10
+- the orchestrator can optionally run `TURBO_PRE_WAVE_CMD` before fixers start
+- the pre-wave hook should enforce its own active-hours and locking if it can create issues
+- work assignment and escalation logic stay the same; only intake size changes
 
 ## Adding a New CLI
 

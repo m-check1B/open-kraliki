@@ -20,6 +20,8 @@ Open-source automation template: AI agents that pull Linear issues, fix code, pu
 
 - **All defaults are 24/7** — no nightly stops. Active hours configurable via env vars but default to 0-24.
 - **AUTOMATION_ENABLED** — master on/off switch in `.env`. Every script checks this first.
+- **CLI fallback chain** — orchestration flows can fall back from Claude to Codex to Opencode/Kimi.
+- **TURBO_MODE** — increases issue intake for large audit/triage waves; normal mode stays conservative.
 - **macOS Bash 3.2 compatibility** — no `${var^}`, no GNU coreutils. Use `awk toupper()`, `perl -e "alarm N; exec @ARGV"` for timeouts, BSD `date`.
 - **No hardcoded paths** — everything uses `$HOME`, `$PROJECT_DIR`, or relative paths from script location.
 - **No model references** — never mention specific AI models (o4-mini, GPT-4, etc.). CLIs manage their own models. Say "Claude Code", "Codex CLI", etc.
@@ -55,6 +57,10 @@ All config is via environment variables in `.env` (sourced from `env.example`). 
 - `TELEGRAM_BOT_TOKEN`, `PA_OWNER_CHAT_ID` — Telegram bot
 - `PROJECT_DIR` — dedicated clone for automation (not working copy!)
 - `AUTOMATION_ENABLED` — `true`/`false` master switch
+- `TURBO_MODE`, `TURBO_MAX_ISSUES` — large-batch intake for backlog floods
+- `TURBO_PRE_WAVE_CMD`, `TURBO_PRE_WAVE_MIN_INTERVAL` — optional pre-fixer audit/triage hook in turbo mode
+- `HEARTBEAT_CLI`, `HEARTBEAT_FALLBACKS` — heartbeat CLI chain
+- `RELAY_CLI_CMD`, `RELAY_CLI_FALLBACKS` — relay CLI chain
 - `GROQ_API_KEY` — optional, for voice transcription
 - `RELAY_TTS_VOICE` — macOS voice for voice replies (default: "Ava (Premium)")
 

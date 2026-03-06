@@ -32,6 +32,7 @@ if [ -f "$ENV_FILE" ]; then
 fi
 LOG_RETENTION_DAYS="${LOG_RETENTION_DAYS:-7}"
 HEARTBEAT_CLI="${HEARTBEAT_CLI:-claude}"
+HEARTBEAT_FALLBACKS="${HEARTBEAT_FALLBACKS:-codex,opencode,kimi}"
 
 # ── On/Off switch (exit early if automation is paused) ─────────
 if [ "${AUTOMATION_ENABLED:-true}" = "false" ]; then
@@ -125,45 +126,15 @@ PROMPT="${PROMPT_TEMPLATE//\{FINDINGS_JSON\}/$FINDINGS_JSON}"
 PROMPT="${PROMPT//\{CURRENT_TIME\}/$CURRENT_TIME}"
 
 # ── Call CLI to analyze findings ─────────────────────────────────
-echo "Calling ${HEARTBEAT_CLI} for analysis..." | tee -a "$LOGFILE"
-
-# Load personality context if available
-SYSTEM_CONTEXT=""
-if [ -d "$PERSONALITY_DIR" ]; then
-  for ctx_file in "${PERSONALITY_DIR}/"*.md; do
-    if [ -f "$ctx_file" ]; then
-      SYSTEM_CONTEXT="${SYSTEM_CONTEXT}$(cat "$ctx_file" 2>/dev/null || true)"$'\n'
-    fi
-  done
-fi
-
-# Build CLI arguments (each CLI has its own flags)
-CLI_ARGS=()
-case "$HEARTBEAT_CLI" in
-  *claude*)
-    CLI_ARGS+=(--print --dangerously-skip-permissions --no-session-persistence)
-    if [ -n "$SYSTEM_CONTEXT" ]; then
-      CLI_ARGS+=(--append-system-prompt "$SYSTEM_CONTEXT")
-    fi
-    CLI_ARGS+=(--allowedTools "Read,Grep,Glob")
-    ;;
-  *codex*)
-    CLI_ARGS+=(exec)
-    ;;
-  *opencode*)
-    CLI_ARGS+=(run --agent build)
-    ;;
-  *kimi*)
-    CLI_ARGS+=(--yes)
-    ;;
-  *)
-    # Unknown CLI: just pipe prompt via stdin
-    ;;
-esac
+echo "Calling ${HEARTBEAT_CLI} with fallbacks [${HEARTBEAT_FALLBACKS}]..." | tee -a "$LOGFILE"
 
 HEARTBEAT_TIMEOUT="${HEARTBEAT_TIMEOUT:-120}"
-# macOS-safe timeout using perl alarm (no GNU coreutils needed)
-RESPONSE=$(echo "$PROMPT" | perl -e "alarm $HEARTBEAT_TIMEOUT; exec @ARGV" "$HEARTBEAT_CLI" "${CLI_ARGS[@]}" 2>&1) || true
+RESPONSE=$(printf "%s" "$PROMPT" | python3 "${AUTOMATION_DIR}/cli_fallback.py" \
+  --primary "$HEARTBEAT_CLI" \
+  --fallbacks "$HEARTBEAT_FALLBACKS" \
+  --timeout "$HEARTBEAT_TIMEOUT" \
+  --cwd "$(cd "$AUTOMATION_DIR/.." && pwd)" \
+  --system-dir "$PERSONALITY_DIR" 2>>"$LOGFILE") || true
 
 echo "CLI response:" | tee -a "$LOGFILE"
 echo "$RESPONSE" | tee -a "$LOGFILE"

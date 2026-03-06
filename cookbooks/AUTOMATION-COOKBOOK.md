@@ -200,7 +200,7 @@ tail -f ~/logs/watchdog/watchdog-*.log
 1. Check active hours → skip if outside
 2. Run heartbeat-precheck.py (no LLM, checks Linear/Calendar/Relay status)
 3. If no findings → exit (cost: $0)
-4. If findings → call AI CLI to compose message
+4. If findings → call primary AI CLI, then fall back through the configured chain on quota/auth/failure
 5. Send Telegram message (unless CLI says "SKIP")
 ```
 
@@ -236,7 +236,49 @@ All configuration is via environment variables. See `env.example` for the full l
 | `COMMIT_PREFIX` | fixers | No (default: [AI-FIX]) |
 | `GROQ_API_KEY` | relay (voice) | No |
 | `ACTIVE_START` / `ACTIVE_END` | fixers, heartbeat, relay | No (default: 0/24) |
+| `TURBO_MODE` / `TURBO_MAX_ISSUES` | precheck, fixers | No |
+| `TURBO_PRE_WAVE_CMD` / `TURBO_PRE_WAVE_MIN_INTERVAL` | orchestrator | No |
+| `HEARTBEAT_CLI` / `HEARTBEAT_FALLBACKS` | heartbeat | No |
+| `RELAY_CLI_CMD` / `RELAY_CLI_FALLBACKS` | relay | No |
 | `PRODUCTION_SERVER` | watchdog | No |
+
+### Turbo mode
+
+Turbo mode is intended for high-volume backlog moments:
+- full app audits
+- large issue imports
+- triage waves that create 50-100 actionable items
+- external CEO / senior-dev orchestration feeding the automation
+
+Set:
+
+```bash
+export TURBO_MODE=true
+export TURBO_MAX_ISSUES=100
+export TURBO_PRE_WAVE_CMD="bash $HOME/github/open-kraliki/automation/turbo-pre-wave.example.sh"
+export TURBO_PRE_WAVE_MIN_INTERVAL=3600
+```
+
+Effect:
+- `automation/precheck.py` fetches a larger Linear result set
+- per-cycle issue intake expands beyond the normal `MAX_ISSUES=10`
+- the orchestrator can run one optional audit/triage hook before fixers begin
+- the hook script must manage its own active-hours and overlap protection if it mutates backlog state
+- slot assignment and escalation stay unchanged
+
+### CLI fallback chain
+
+Two orchestration surfaces now support primary-to-fallback routing:
+
+```bash
+export HEARTBEAT_CLI="claude"
+export HEARTBEAT_FALLBACKS="codex,opencode,kimi"
+
+export RELAY_CLI_CMD="claude --print"
+export RELAY_CLI_FALLBACKS="codex,opencode,kimi"
+```
+
+This is specifically meant to keep the system alive when one provider is rate-limited overnight or temporarily unavailable.
 
 ### Log Locations
 

@@ -15,6 +15,8 @@ You write a bug report  →  AI reads it  →  AI fixes the code  →  commit + 
 Most "AI coding" tools require you to sit there and prompt them. This runs **unattended** — you file issues, walk away, and come back to fixed code.
 
 - **Multi-CLI failover** — runs up to 4 AI coding CLIs (Claude, Codex, Opencode, Kimi). If one can't fix an issue after 3 attempts, it automatically escalates to the next CLI.
+- **Primary-to-fallback orchestration** — heartbeat and relay flows can fall back from Claude to Codex, then Opencode/Kimi, instead of stalling on one provider's quota or auth issue.
+- **Turbo mode** — flip one env var to handle large audit waves: ingest 50-100 issues, triage them, and feed them into the fixer fleet in bigger chunks.
 - **Auto-detects installed CLIs** — only have Claude? It works. Install Codex later and it picks it up automatically.
 - **One-switch pause** — set `AUTOMATION_ENABLED=false` in `.env` to pause everything instantly. Set it back to `true` to resume. No uninstalling, no reconfiguring.
 - **Telegram chatbot** — message your bot from your phone to ask about code, check issues, or get status. Voice in → voice out (Groq Whisper + macOS TTS).
@@ -185,6 +187,7 @@ open-kraliki/
 │   ├── watchdog.sh                  # Health monitor + auto-recovery (6 checks)
 │   ├── send-telegram.py             # Simple Telegram message sender
 │   ├── linear-tool.py              # Linear API CLI (list/get/create/update/comment/search)
+│   ├── turbo-pre-wave.example.sh    # Example audit/triage hook for TURBO_PRE_WAVE_CMD
 │   └── fixers/
 │       ├── claude-fixer.sh          # Slot 0 — Claude Code
 │       ├── codex-fixer.sh           # Slot 1 — Codex CLI
@@ -230,13 +233,37 @@ All settings live in `.env` (copied from `env.example`). Key variables:
 | `PA_OWNER_CHAT_ID` | Your Telegram chat ID | Yes |
 | `PROJECT_DIR` | Path to dedicated project clone | Yes |
 | `AUTOMATION_ENABLED` | `true`/`false` — master on/off switch | No (default: `true`) |
+| `TURBO_MODE` | `true`/`false` — expands issue intake for large audit/triage waves | No (default: `false`) |
+| `TURBO_PRE_WAVE_CMD` | Optional shell command run before fixers during turbo waves | No |
 | `ACTIVE_START` / `ACTIVE_END` | Active hours (e.g., `8` / `22`) | No (default: 24/7) |
 | `ISSUE_PREFIX` | Issue title prefix to match (e.g., `[AI-QA]`) | No |
 | `COMMIT_PREFIX` | Commit message prefix (e.g., `[AI-QA]`) | No |
+| `HEARTBEAT_FALLBACKS` | Comma-separated CLI fallback chain for heartbeat | No |
+| `RELAY_CLI_FALLBACKS` | Comma-separated CLI fallback chain for relay | No |
 | `GROQ_API_KEY` | Voice transcription via Groq Whisper | No |
 | `RELAY_TTS_VOICE` | macOS voice for voice replies | No (default: `Ava (Premium)`) |
 
 See [env.example](./env.example) for the full list with comments.
+
+### Turbo mode
+
+Turbo mode is for backlog floods, not everyday bug-fixing. Turn it on when a product audit, beta-readiness review, or CEO/senior-dev workflow has filed a large issue set and you want the automation to absorb it fast.
+
+```bash
+export TURBO_MODE=true
+export TURBO_MAX_ISSUES=100
+export TURBO_PRE_WAVE_CMD="bash $HOME/github/open-kraliki/automation/turbo-pre-wave.example.sh"
+export TURBO_PRE_WAVE_MIN_INTERVAL=3600
+```
+
+In turbo mode:
+- `precheck.py` fetches a larger Linear window
+- each fixer slot can receive much larger batches
+- the optional `TURBO_PRE_WAVE_CMD` hook can run audit/triage work before fixers start
+- the hook script is responsible for its own active-hours and lock policy if it creates issues
+- the system is better suited for 50-100 issue audit waves and follow-on agent handoff
+
+This repo stays generic, but the intended pattern is to pair turbo mode with an external audit/triage workflow. Start from [turbo-pre-wave.example.sh](/Users/matejhavlin/github/open-kraliki/automation/turbo-pre-wave.example.sh) and replace the placeholder commands with your own product audit, issue import, and triage steps.
 
 ---
 

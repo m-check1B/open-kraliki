@@ -23,14 +23,14 @@ Env vars:
 
 import json
 import os
-import shlex
 import signal
-import subprocess
 import sys
 import tempfile
 import time
 from urllib.error import URLError
 from urllib.request import Request, urlopen
+
+from cli_fallback import run_cli_chain
 
 # ── Bootstrap env vars (launchd does not inherit shell env) ───────────
 def _load_env():
@@ -73,6 +73,7 @@ WHISPER_LANGUAGE = os.environ.get("WHISPER_LANGUAGE", "en")
 TTS_VOICE = os.environ.get("RELAY_TTS_VOICE", "Ava (Premium)")  # macOS say voice
 
 CLI_CMD = os.environ.get("RELAY_CLI_CMD", "claude --print")
+CLI_FALLBACKS = os.environ.get("RELAY_CLI_FALLBACKS", "codex,opencode,kimi")
 CLI_TIMEOUT = int(os.environ.get("RELAY_CLI_TIMEOUT", os.environ.get("FIX_TIMEOUT", "120")))
 ACTIVE_START = int(os.environ.get("RELAY_ACTIVE_START", "0"))
 ACTIVE_END = int(os.environ.get("RELAY_ACTIVE_END", "24"))
@@ -393,45 +394,18 @@ def get_system_context() -> str:
 
 def call_cli(prompt: str, system_context: str) -> str:
     """Call the configured CLI command and return the response."""
-    env = os.environ.copy()
-    env.pop("CLAUDECODE", None)
-
-    cmd_parts = shlex.split(CLI_CMD)
-    cmd = list(cmd_parts)
-
-    # Add CLI-specific flags (each CLI has its own interface)
-    cli_name = cmd_parts[0].lower()
-    if "claude" in cli_name:
-        cmd += ["--dangerously-skip-permissions", "--no-session-persistence"]
-        if system_context:
-            cmd += ["--append-system-prompt", system_context]
-    elif "codex" in cli_name:
-        pass  # codex uses its default flags
-    elif "opencode" in cli_name:
-        cmd += ["run", "--agent", "build"]
-    elif "kimi" in cli_name:
-        cmd += ["--yes"]
-
-    try:
-        result = subprocess.run(
-            cmd,
-            input=prompt,
-            capture_output=True,
-            text=True,
-            timeout=CLI_TIMEOUT,
-            cwd=PROJECT_ROOT,
-            env=env,
-        )
-        output = result.stdout.strip()
-        if not output:
-            output = result.stderr.strip()
+    output, used = run_cli_chain(
+        prompt=prompt,
+        primary=CLI_CMD,
+        fallbacks=CLI_FALLBACKS,
+        cwd=PROJECT_ROOT,
+        system_context=system_context,
+        timeout=CLI_TIMEOUT,
+    )
+    if used:
+        log(f"CLI response generated via: {used}")
         return output or "(empty response)"
-    except subprocess.TimeoutExpired:
-        return "Timeout -- processing took too long. Try a simpler request."
-    except FileNotFoundError:
-        return f"Error: CLI command not found: {cmd_parts[0]}"
-    except Exception as e:
-        return f"Error: {e}"
+    return output or "Error: no CLI produced a response"
 
 
 def is_active_hours() -> bool:

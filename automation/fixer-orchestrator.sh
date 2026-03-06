@@ -28,6 +28,10 @@ if [ -f "$ENV_FILE" ]; then
   set -e
 fi
 LOG_RETENTION_DAYS="${LOG_RETENTION_DAYS:-7}"
+TURBO_MODE="${TURBO_MODE:-false}"
+TURBO_PRE_WAVE_CMD="${TURBO_PRE_WAVE_CMD:-}"
+TURBO_PRE_WAVE_MIN_INTERVAL="${TURBO_PRE_WAVE_MIN_INTERVAL:-3600}"
+TURBO_STATE_FILE="${TURBO_STATE_FILE:-${LOGDIR}/turbo-wave.state}"
 
 # ── On/Off switch (exit early if automation is paused) ─────────
 if [ "${AUTOMATION_ENABLED:-true}" = "false" ]; then
@@ -56,6 +60,33 @@ fi
 
 echo $$ > "$LOCKFILE"
 trap 'rm -f "$LOCKFILE"' EXIT
+
+run_turbo_pre_wave() {
+  if [ "$TURBO_MODE" != "true" ] || [ -z "$TURBO_PRE_WAVE_CMD" ]; then
+    return 0
+  fi
+
+  local now last_run elapsed
+  now=$(date +%s)
+  last_run=0
+  if [ -f "$TURBO_STATE_FILE" ]; then
+    last_run=$(cat "$TURBO_STATE_FILE" 2>/dev/null || echo "0")
+  fi
+  elapsed=$((now - last_run))
+
+  if [ "$elapsed" -lt "$TURBO_PRE_WAVE_MIN_INTERVAL" ]; then
+    echo "Turbo pre-wave cooldown active (${elapsed}s < ${TURBO_PRE_WAVE_MIN_INTERVAL}s), skipping." | tee -a "$LOGFILE"
+    return 0
+  fi
+
+  echo "Running turbo pre-wave command: ${TURBO_PRE_WAVE_CMD}" | tee -a "$LOGFILE"
+  if bash -lc "$TURBO_PRE_WAVE_CMD" 2>&1 | tee -a "$LOGFILE"; then
+    printf "%s" "$now" > "$TURBO_STATE_FILE"
+    echo "Turbo pre-wave complete." | tee -a "$LOGFILE"
+  else
+    echo "WARNING: Turbo pre-wave failed. Continuing to fixers." | tee -a "$LOGFILE"
+  fi
+}
 
 # ── Preflight: git identity (commits fail without this) ────────
 if ! git config user.name &>/dev/null || ! git config user.email &>/dev/null; then
@@ -86,6 +117,8 @@ fi
 
 # Export fixer count so precheck.py can use dynamic modulo
 export FIXER_COUNT="${#FIXERS[@]}"
+
+run_turbo_pre_wave
 
 # ── Run fixers sequentially (safe: all share one git worktree) ──
 echo "Running ${#FIXERS[@]} fixers sequentially..." | tee -a "$LOGFILE"

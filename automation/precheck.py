@@ -11,7 +11,9 @@ Env vars:
   COMMIT_PREFIX         — Additional title prefix to match (optional)
   FIXER_SLOT            — Slot for splitting work: "0"/"1"/"2"/"3" (mod 4) or "even"/"odd" (mod 2)
   QA_FIXER_STATE_FILE   — Path to JSON state file tracking attempted issues
-  MAX_ISSUES            — Max issues to return per cycle (default: 10)
+  MAX_ISSUES            — Max issues to return per cycle in normal mode (default: 10)
+  TURBO_MODE            — When true, use larger audit/triage/fixer batches
+  TURBO_MAX_ISSUES      — Max issues to return per cycle in turbo mode (default: 100)
   SKIP_LABELS           — Comma-separated label names to skip (default: "wont-fix,manual,flaky")
 """
 
@@ -35,6 +37,14 @@ try:
 except ValueError:
     print("WARNING: MAX_ISSUES is not a valid integer, using default 10", file=sys.stderr)
     MAX_ISSUES = 10
+TURBO_MODE = os.environ.get("TURBO_MODE", "false").lower() == "true"
+try:
+    TURBO_MAX_ISSUES = int(os.environ.get("TURBO_MAX_ISSUES", "100"))
+except ValueError:
+    print("WARNING: TURBO_MAX_ISSUES is not a valid integer, using default 100", file=sys.stderr)
+    TURBO_MAX_ISSUES = 100
+EFFECTIVE_MAX_ISSUES = TURBO_MAX_ISSUES if TURBO_MODE else MAX_ISSUES
+FETCH_LIMIT = min(max(EFFECTIVE_MAX_ISSUES * 3, 50), 250)
 
 SKIP_LABELS = {
     s.strip().lower()
@@ -88,7 +98,7 @@ def search_issues() -> list[dict]:
           team: { id: { eq: "%s" } }
           state: { type: { in: ["backlog", "unstarted", "started"] } }
         }
-        first: 50
+        first: %s
         orderBy: createdAt
       ) {
         nodes {
@@ -104,7 +114,7 @@ def search_issues() -> list[dict]:
         }
       }
     }
-    """ % LINEAR_TEAM_ID
+    """ % (LINEAR_TEAM_ID, FETCH_LIMIT)
     data = gql(query)
     return data.get("issues", {}).get("nodes", [])
 
@@ -147,7 +157,7 @@ def filter_issues(issues: list[dict], state: dict) -> list[dict]:
             "state": issue.get("state", {}).get("name", ""),
         })
 
-        if len(result) >= MAX_ISSUES:
+        if len(result) >= EFFECTIVE_MAX_ISSUES:
             break
 
     return result
@@ -226,6 +236,8 @@ def main():
 
         output = {
             "timestamp": datetime.now().isoformat(),
+            "turbo_mode": TURBO_MODE,
+            "effective_max_issues": EFFECTIVE_MAX_ISSUES,
             "total_open": total_open,
             "issues": matched,
             "has_issues": len(matched) > 0,
