@@ -39,6 +39,15 @@ if [ "${AUTOMATION_ENABLED:-true}" = "false" ]; then
   exit 0
 fi
 
+# ── Active hours guard ───────────────────────────────────────
+HOUR=$(date +%H | sed 's/^0//')
+ACTIVE_START="${ACTIVE_START:-8}"
+ACTIVE_END="${ACTIVE_END:-20}"
+if [ "$HOUR" -lt "$ACTIVE_START" ] || [ "$HOUR" -ge "$ACTIVE_END" ]; then
+  echo "Outside active hours (${ACTIVE_START}-${ACTIVE_END}), current hour=${HOUR}. Skipping."
+  exit 0
+fi
+
 mkdir -p "$LOGDIR"
 
 # Rotate logs older than retention period
